@@ -6,7 +6,7 @@ NFT Asset Toolbox is a Python toolkit for generating, processing, validating, an
 
 ## Features
 
-- Desktop dashboard for running common generator, image, and metadata tools
+- Desktop dashboard for navigating and running NFT asset tools
 - Image, metadata, trait, and supply stats
 - Metadata validation and report output
 - Image resize and WebP conversion tools
