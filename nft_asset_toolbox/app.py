@@ -321,11 +321,8 @@ class MainWindow(QMainWindow):
     def _dashboard_page(self) -> QWidget:
         page = self._page()
         header = QLabel("Generate, process, validate, and prepare NFT collection assets.")
-        header.setObjectName("h1")
-        subtitle = QLabel("Select a collection folder to inspect assets, validate metadata, and generate reports.")
-        subtitle.setObjectName("muted")
+        header.setObjectName("muted")
         page.addWidget(header)
-        page.addWidget(subtitle)
 
         folder_card = Card()
         row = QHBoxLayout()
