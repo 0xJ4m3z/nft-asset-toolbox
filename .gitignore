@@ -3,4 +3,12 @@
 __pycache__/
 *.pyc
 .pytest_cache/
+.venv/
 
+# Generated app output
+reports/
+new_metadata/
+output/
+resized_png/
+resized_webp/
+webp/
