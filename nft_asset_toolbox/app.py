@@ -64,8 +64,8 @@ class Card(QFrame):
         super().__init__()
         self.setObjectName("card")
         self.layout = QVBoxLayout(self)
-        self.layout.setContentsMargins(18, 14, 18, 14)
-        self.layout.setSpacing(8)
+        self.layout.setContentsMargins(16, 12, 16, 12)
+        self.layout.setSpacing(6)
         if title:
             label = QLabel(title)
             label.setObjectName("cardTitle")
@@ -81,7 +81,7 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("NFT Asset Toolbox")
-        self.resize(1180, 760)
+        self.resize(1280, 800)
         self.collection_dir = SAMPLE_COLLECTION
         self.worker: ValidationWorker | None = None
 
@@ -155,7 +155,7 @@ class MainWindow(QMainWindow):
         bar = QFrame()
         bar.setObjectName("bottomBar")
         layout = QHBoxLayout(bar)
-        layout.setContentsMargins(20, 8, 20, 8)
+        layout.setContentsMargins(20, 6, 20, 6)
         layout.addWidget(QLabel("Python " + sys.version.split()[0]))
         layout.addSpacing(18)
         layout.addWidget(QLabel("Pillow required for image scripts"))
@@ -176,7 +176,7 @@ class MainWindow(QMainWindow):
         logo = QLabel("NFT")
         logo.setObjectName("brandLogo")
         logo.setAlignment(Qt.AlignCenter)
-        logo.setFixedSize(38, 38)
+        logo.setFixedSize(36, 36)
 
         text = QLabel("NFT Asset Toolbox")
         text.setObjectName("brand")
@@ -196,7 +196,7 @@ class MainWindow(QMainWindow):
         icon = QLabel(icon_text)
         icon.setObjectName("statIcon")
         icon.setAlignment(Qt.AlignCenter)
-        icon.setFixedSize(38, 38)
+        icon.setFixedSize(36, 36)
 
         value_box = QVBoxLayout()
         value_box.setContentsMargins(0, 0, 0, 0)
@@ -223,7 +223,7 @@ class MainWindow(QMainWindow):
         page_index: int,
     ) -> Card:
         card = Card()
-        card.setMinimumHeight(292)
+        card.setMinimumHeight(238)
         card.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)
         header = QHBoxLayout()
         header.setContentsMargins(0, 0, 0, 0)
@@ -232,7 +232,7 @@ class MainWindow(QMainWindow):
         icon = QLabel(icon_text)
         icon.setObjectName("toolIcon")
         icon.setAlignment(Qt.AlignCenter)
-        icon.setFixedSize(42, 42)
+        icon.setFixedSize(36, 36)
 
         title_label = QLabel(title)
         title_label.setObjectName("cardTitle")
@@ -250,7 +250,7 @@ class MainWindow(QMainWindow):
             card.layout.addWidget(self._feature_label(feature))
 
         button = QPushButton(button_text)
-        button.setFixedHeight(36)
+        button.setFixedHeight(32)
         button.clicked.connect(lambda checked=False, i=page_index: self._select_page(i))
         card.layout.addStretch(1)
         card.layout.addWidget(button)
@@ -335,7 +335,7 @@ class MainWindow(QMainWindow):
         self.activity_table.setColumnWidth(0, 132)
         self.activity_table.setColumnWidth(1, 190)
         self.activity_table.setColumnWidth(2, 88)
-        self.activity_table.setMinimumHeight(150)
+        self.activity_table.setMinimumHeight(118)
         activity.layout.addWidget(self.activity_table)
         lower.addWidget(activity, 3)
 
@@ -453,8 +453,8 @@ class MainWindow(QMainWindow):
 
     def _page(self) -> QVBoxLayout:
         layout = QVBoxLayout()
-        layout.setContentsMargins(26, 20, 26, 16)
-        layout.setSpacing(11)
+        layout.setContentsMargins(26, 16, 26, 20)
+        layout.setSpacing(9)
         return layout
 
     def _wrap(self, layout: QVBoxLayout) -> QWidget:
@@ -562,7 +562,7 @@ class MainWindow(QMainWindow):
         values = [datetime.now().strftime("%Y-%m-%d %H:%M"), action, status, details]
         for col, value in enumerate(values):
             self.activity_table.setItem(row, col, QTableWidgetItem(value))
-        self.activity_table.setRowHeight(row, 30)
+        self.activity_table.setRowHeight(row, 26)
 
     def _placeholder(self, title: str, body: str) -> None:
         self.add_activity(title, "Opened placeholder", "Info", body)
@@ -600,7 +600,7 @@ class MainWindow(QMainWindow):
             #brandHeader { background: transparent; }
             #brand {
                 color: #f4f7fb;
-                font-size: 15px;
+                font-size: 14px;
                 font-weight: 800;
                 line-height: 1.15;
             }
@@ -612,7 +612,7 @@ class MainWindow(QMainWindow):
                 font-size: 11px;
                 font-weight: 900;
             }
-            #h1 { color: #f7f9fd; font-size: 24px; font-weight: 800; }
+            #h1 { color: #f7f9fd; font-size: 23px; font-weight: 800; }
             #card, #statCard, #miniStatus {
                 background: #151f2e;
                 border: 1px solid #26344c;
@@ -620,10 +620,10 @@ class MainWindow(QMainWindow):
             }
             #statCard { background: #141e2d; }
             #miniStatus { background: #142031; }
-            #cardTitle { font-size: 15px; font-weight: 800; color: #f5f8fc; }
+            #cardTitle { font-size: 14px; font-weight: 800; color: #f5f8fc; }
             #muted { color: #93a4ba; }
             #folderPath { color: #f4f7fb; font-weight: 700; }
-            #statValue { color: #f8fbff; font-size: 28px; font-weight: 850; }
+            #statValue { color: #f8fbff; font-size: 26px; font-weight: 850; }
             #statIcon, #toolIcon {
                 background: #21314b;
                 border: 1px solid #31476a;
@@ -638,8 +638,8 @@ class MainWindow(QMainWindow):
             }
             #featureText {
                 color: #b8c7db;
-                font-size: 12px;
-                padding: 0 0 1px 0;
+                font-size: 11px;
+                padding: 0;
             }
             #bottomBar { background: #111a28; border-top: 1px solid #233046; color: #9fb0c4; }
             QToolButton {
@@ -654,7 +654,7 @@ class MainWindow(QMainWindow):
                 color: white;
                 border: 0;
                 border-radius: 6px;
-                padding: 6px 12px;
+                padding: 5px 12px;
                 font-weight: 700;
             }
             QPushButton:hover { background: #3f72ee; }
@@ -669,7 +669,7 @@ class MainWindow(QMainWindow):
                 background: #172235;
                 color: #9fb0c4;
                 border: 0;
-                padding: 8px;
+                padding: 6px;
             }
             QTableWidget {
                 gridline-color: #26344c;
