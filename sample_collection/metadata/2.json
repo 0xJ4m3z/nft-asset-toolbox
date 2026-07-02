@@ -5,7 +5,7 @@
   "attributes": [
     {
       "trait_type": "Background",
-      "value": "Forest"
+      "value": "Coral"
     },
     {
       "trait_type": "Frame",
@@ -14,6 +14,26 @@
     {
       "trait_type": "Icon",
       "value": "Orbit"
+    },
+    {
+      "trait_type": "Palette",
+      "value": "Neon"
+    },
+    {
+      "trait_type": "Material",
+      "value": "Matte"
+    },
+    {
+      "trait_type": "Pattern",
+      "value": "Grid"
+    },
+    {
+      "trait_type": "Rarity",
+      "value": "Common"
+    },
+    {
+      "trait_type": "Edition",
+      "value": "Demo 002"
     }
   ],
   "tokenId": 2,

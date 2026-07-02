@@ -9,9 +9,9 @@ def test_sample_collection_validates():
     result = validate_collection(collection)
 
     assert result.ok
-    assert result.images_found == 4
-    assert result.metadata_found == 4
-    assert result.trait_count == 3
+    assert result.images_found == 100
+    assert result.metadata_found == 100
+    assert result.trait_count == 8
 
 
 def test_sample_collection_stats():
@@ -19,7 +19,7 @@ def test_sample_collection_stats():
 
     stats = get_collection_stats(collection)
 
-    assert stats.images == 4
-    assert stats.metadata == 4
-    assert stats.traits == 3
-    assert stats.supply == 4
+    assert stats.images == 100
+    assert stats.metadata == 100
+    assert stats.traits == 8
+    assert stats.supply == 100

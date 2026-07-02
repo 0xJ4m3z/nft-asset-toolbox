@@ -1,0 +1,48 @@
+{
+  "name": "Sample Asset #95",
+  "description": "Generic demo metadata for NFT Asset Toolbox.",
+  "image": "ipfs://example-cid/95.png",
+  "attributes": [
+    {
+      "trait_type": "Background",
+      "value": "Midnight"
+    },
+    {
+      "trait_type": "Frame",
+      "value": "Graphite"
+    },
+    {
+      "trait_type": "Icon",
+      "value": "Comet"
+    },
+    {
+      "trait_type": "Palette",
+      "value": "Cool"
+    },
+    {
+      "trait_type": "Material",
+      "value": "Foil"
+    },
+    {
+      "trait_type": "Pattern",
+      "value": "Dot"
+    },
+    {
+      "trait_type": "Rarity",
+      "value": "Uncommon"
+    },
+    {
+      "trait_type": "Edition",
+      "value": "Demo 095"
+    }
+  ],
+  "tokenId": 95,
+  "properties": {
+    "files": [
+      {
+        "uri": "95.png",
+        "type": "image/png"
+      }
+    ]
+  }
+}

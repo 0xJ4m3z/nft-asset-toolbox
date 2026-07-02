@@ -1,0 +1,48 @@
+{
+  "name": "Sample Asset #29",
+  "description": "Generic demo metadata for NFT Asset Toolbox.",
+  "image": "ipfs://example-cid/29.png",
+  "attributes": [
+    {
+      "trait_type": "Background",
+      "value": "Violet"
+    },
+    {
+      "trait_type": "Frame",
+      "value": "Silver"
+    },
+    {
+      "trait_type": "Icon",
+      "value": "Wave"
+    },
+    {
+      "trait_type": "Palette",
+      "value": "Mono"
+    },
+    {
+      "trait_type": "Material",
+      "value": "Glass"
+    },
+    {
+      "trait_type": "Pattern",
+      "value": "Solid"
+    },
+    {
+      "trait_type": "Rarity",
+      "value": "Epic"
+    },
+    {
+      "trait_type": "Edition",
+      "value": "Demo 029"
+    }
+  ],
+  "tokenId": 29,
+  "properties": {
+    "files": [
+      {
+        "uri": "29.png",
+        "type": "image/png"
+      }
+    ]
+  }
+}

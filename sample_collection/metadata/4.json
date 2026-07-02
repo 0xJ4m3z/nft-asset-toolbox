@@ -5,15 +5,35 @@
   "attributes": [
     {
       "trait_type": "Background",
-      "value": "Azure"
+      "value": "Violet"
     },
     {
       "trait_type": "Frame",
-      "value": "Silver"
+      "value": "Copper"
     },
     {
       "trait_type": "Icon",
       "value": "Wave"
+    },
+    {
+      "trait_type": "Palette",
+      "value": "Warm"
+    },
+    {
+      "trait_type": "Material",
+      "value": "Glass"
+    },
+    {
+      "trait_type": "Pattern",
+      "value": "Diagonal"
+    },
+    {
+      "trait_type": "Rarity",
+      "value": "Rare"
+    },
+    {
+      "trait_type": "Edition",
+      "value": "Demo 004"
     }
   ],
   "tokenId": 4,

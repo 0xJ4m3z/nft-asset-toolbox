@@ -5,7 +5,7 @@
   "attributes": [
     {
       "trait_type": "Background",
-      "value": "Coral"
+      "value": "Azure"
     },
     {
       "trait_type": "Frame",
@@ -14,6 +14,26 @@
     {
       "trait_type": "Icon",
       "value": "Prism"
+    },
+    {
+      "trait_type": "Palette",
+      "value": "Cool"
+    },
+    {
+      "trait_type": "Material",
+      "value": "Gloss"
+    },
+    {
+      "trait_type": "Pattern",
+      "value": "Dot"
+    },
+    {
+      "trait_type": "Rarity",
+      "value": "Uncommon"
+    },
+    {
+      "trait_type": "Edition",
+      "value": "Demo 003"
     }
   ],
   "tokenId": 3,

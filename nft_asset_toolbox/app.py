@@ -7,9 +7,10 @@ from datetime import datetime
 from pathlib import Path
 
 from PySide6.QtCore import Qt, QThread, QTimer, Signal
-from PySide6.QtGui import QAction, QFont
+from PySide6.QtGui import QFont
 from PySide6.QtWidgets import (
     QApplication,
+    QAbstractItemView,
     QCheckBox,
     QComboBox,
     QFileDialog,
@@ -22,7 +23,6 @@ from PySide6.QtWidgets import (
     QMainWindow,
     QMessageBox,
     QPushButton,
-    QSizePolicy,
     QSpinBox,
     QStackedWidget,
     QTableWidget,
@@ -85,7 +85,7 @@ class MainWindow(QMainWindow):
 
         self.stack = QStackedWidget()
         self.nav_buttons: list[QToolButton] = []
-        self.activity_table = QTableWidget(0, 5)
+        self.activity_table = QTableWidget(0, 4)
         self.results_panel = QTextEdit()
         self.meta_results = QTextEdit()
         self.folder_label = QLabel()
@@ -110,9 +110,7 @@ class MainWindow(QMainWindow):
         layout.setContentsMargins(16, 18, 16, 14)
         layout.setSpacing(10)
 
-        brand = QLabel("NFT\nASSET TOOLBOX")
-        brand.setObjectName("brand")
-        layout.addWidget(brand)
+        layout.addWidget(self._brand_header())
         layout.addSpacing(16)
 
         pages = [
@@ -165,6 +163,101 @@ class MainWindow(QMainWindow):
         layout.addWidget(self.status_ready)
         return bar
 
+    def _brand_header(self) -> QWidget:
+        header = QWidget()
+        header.setObjectName("brandHeader")
+        layout = QHBoxLayout(header)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(10)
+
+        logo = QLabel("NFT")
+        logo.setObjectName("brandLogo")
+        logo.setAlignment(Qt.AlignCenter)
+        logo.setFixedSize(38, 38)
+
+        text = QLabel("NFT Asset Toolbox")
+        text.setObjectName("brand")
+        text.setWordWrap(True)
+
+        layout.addWidget(logo)
+        layout.addWidget(text, 1)
+        return header
+
+    def _stat_card(self, label: str, icon_text: str) -> tuple[Card, QLabel]:
+        card = Card()
+        card.setObjectName("statCard")
+        row = QHBoxLayout()
+        row.setContentsMargins(0, 0, 0, 0)
+        row.setSpacing(12)
+
+        icon = QLabel(icon_text)
+        icon.setObjectName("statIcon")
+        icon.setAlignment(Qt.AlignCenter)
+        icon.setFixedSize(38, 38)
+
+        value_box = QVBoxLayout()
+        value_box.setContentsMargins(0, 0, 0, 0)
+        value_box.setSpacing(2)
+        value = QLabel("0")
+        value.setObjectName("statValue")
+        label_widget = QLabel(label)
+        label_widget.setObjectName("muted")
+        value_box.addWidget(value)
+        value_box.addWidget(label_widget)
+
+        row.addWidget(icon)
+        row.addLayout(value_box, 1)
+        card.layout.addLayout(row)
+        return card, value
+
+    def _tool_card(
+        self,
+        icon_text: str,
+        title: str,
+        body: str,
+        features: list[str],
+        button_text: str,
+        page_index: int,
+    ) -> Card:
+        card = Card()
+        top = QHBoxLayout()
+        top.setContentsMargins(0, 0, 0, 0)
+        top.setSpacing(12)
+
+        icon = QLabel(icon_text)
+        icon.setObjectName("toolIcon")
+        icon.setAlignment(Qt.AlignCenter)
+        icon.setFixedSize(44, 44)
+
+        copy = QVBoxLayout()
+        copy.setContentsMargins(0, 0, 0, 0)
+        copy.setSpacing(4)
+        title_label = QLabel(title)
+        title_label.setObjectName("cardTitle")
+        desc = QLabel(body)
+        desc.setObjectName("muted")
+        desc.setWordWrap(True)
+        copy.addWidget(title_label)
+        copy.addWidget(desc)
+
+        top.addWidget(icon)
+        top.addLayout(copy, 1)
+        card.layout.addLayout(top)
+
+        for feature in features:
+            card.layout.addWidget(self._feature_label(feature))
+
+        button = QPushButton(button_text)
+        button.clicked.connect(lambda checked=False, i=page_index: self._select_page(i))
+        card.layout.addStretch(1)
+        card.layout.addWidget(button)
+        return card
+
+    def _feature_label(self, text: str) -> QLabel:
+        label = QLabel(f"+ {text}")
+        label.setObjectName("featureText")
+        return label
+
     def _dashboard_page(self) -> QWidget:
         page = self._page()
         header = QLabel("Welcome to NFT Asset Toolbox")
@@ -179,45 +272,64 @@ class MainWindow(QMainWindow):
         self.folder_label.setObjectName("folderPath")
         change = QPushButton("Change Folder")
         change.clicked.connect(self.choose_folder)
-        row.addWidget(QLabel("Current collection folder"))
+        folder_hint = QLabel("Current collection folder")
+        folder_hint.setObjectName("muted")
+        row.addWidget(folder_hint)
         row.addWidget(self.folder_label, 1)
         row.addWidget(change)
         folder_card.layout.addLayout(row)
         page.addWidget(folder_card)
 
         stats = QHBoxLayout()
+        stat_icons = {"Images": "IMG", "Metadata": "JSON", "Traits": "TRT", "Supply": "#"}
         for key in ["Images", "Metadata", "Traits", "Supply"]:
-            card = Card()
-            value = QLabel("0")
-            value.setObjectName("statValue")
-            label = QLabel(key)
-            label.setObjectName("muted")
-            card.layout.addWidget(value)
-            card.layout.addWidget(label)
+            card, value = self._stat_card(key, stat_icons[key])
             stats.addWidget(card)
             self.stat_labels[key] = value
         page.addLayout(stats)
 
         tool_cards = QHBoxLayout()
-        for title, body, button_text, page_index in [
-            ("Generate Collection", "Create collection metadata and layered images from asset folders.", "Open Generator", 1),
-            ("Image Tools", "Resize PNGs, convert PNG to lossless WebP, and resize WebP assets.", "Open Image Tools", 2),
-            ("Metadata Tools", "Validate supply, JSON structure, trait uniqueness, reports, and IPFS CIDs.", "Open Metadata Tools", 3),
+        for icon, title, body, features, button_text, page_index in [
+            (
+                "GEN",
+                "Generate Collection",
+                "Create layered NFT assets and ERC-721 metadata.",
+                ["Layered image generation", "Weighted rarity support", "Metadata output", "Custom traits"],
+                "Open Generator",
+                1,
+            ),
+            (
+                "IMG",
+                "Image Tools",
+                "Resize images and convert PNG assets to WebP.",
+                ["Resize PNG batches", "Lossless WebP export", "Resize WebP assets", "Preserve transparency"],
+                "Open Image Tools",
+                2,
+            ),
+            (
+                "META",
+                "Metadata Tools",
+                "Validate metadata, check traits, and prepare IPFS image fields.",
+                ["Validate supply", "Check JSON structure", "Detect duplicate traits", "Update image fields"],
+                "Open Metadata Tools",
+                3,
+            ),
         ]:
-            card = Card(title, body)
-            button = QPushButton(button_text)
-            button.clicked.connect(lambda checked=False, i=page_index: self._select_page(i))
-            card.layout.addStretch(1)
-            card.layout.addWidget(button)
+            card = self._tool_card(icon, title, body, features, button_text, page_index)
             tool_cards.addWidget(card)
         page.addLayout(tool_cards)
 
         lower = QHBoxLayout()
         activity = Card("Recent Activity")
-        self.activity_table.setHorizontalHeaderLabels(["Time", "Tool", "Action", "Status", "Details"])
+        self.activity_table.setHorizontalHeaderLabels(["Time", "Activity", "Status", "Details"])
         self.activity_table.verticalHeader().setVisible(False)
         self.activity_table.horizontalHeader().setStretchLastSection(True)
         self.activity_table.setAlternatingRowColors(True)
+        self.activity_table.setShowGrid(False)
+        self.activity_table.setSelectionBehavior(QAbstractItemView.SelectRows)
+        self.activity_table.setColumnWidth(0, 132)
+        self.activity_table.setColumnWidth(1, 190)
+        self.activity_table.setColumnWidth(2, 88)
         activity.layout.addWidget(self.activity_table)
         lower.addWidget(activity, 3)
 
@@ -238,7 +350,9 @@ class MainWindow(QMainWindow):
         quick.layout.addLayout(grid)
         lower.addWidget(quick, 2)
         page.addLayout(lower, 1)
-        self.add_activity("Dashboard", "Loaded sample collection", "Success", "Ready for validation")
+        self.add_activity("Dashboard", "Loaded sample collection", "Success", "100 images, 100 metadata")
+        self.add_activity("Metadata Tools", "Validate Supply", "Success", "No missing files")
+        self.add_activity("Metadata Tools", "Trait Report", "Success", "Report generated")
         return self._wrap(page)
 
     def _generator_page(self) -> QWidget:
@@ -425,7 +539,7 @@ class MainWindow(QMainWindow):
     def add_activity(self, tool: str, action: str, status: str, details: str) -> None:
         row = self.activity_table.rowCount()
         self.activity_table.insertRow(row)
-        values = [datetime.now().strftime("%Y-%m-%d %H:%M"), tool, action, status, details]
+        values = [datetime.now().strftime("%Y-%m-%d %H:%M"), action, status, details]
         for col, value in enumerate(values):
             self.activity_table.setItem(row, col, QTableWidgetItem(value))
 
@@ -456,20 +570,54 @@ class MainWindow(QMainWindow):
         QApplication.instance().setFont(QFont("Inter", 10))
         self.setStyleSheet(
             """
-            QMainWindow, QWidget { background: #0f1722; color: #dbe6f4; }
+            QMainWindow { background: #0f1722; }
+            QWidget { background: transparent; color: #dbe6f4; }
+            QLabel { background: transparent; }
             #sidebar { background: #101826; border-right: 1px solid #233046; }
-            #brand { color: #f4f7fb; font-size: 18px; font-weight: 800; }
+            #brandHeader { background: transparent; }
+            #brand {
+                color: #f4f7fb;
+                font-size: 15px;
+                font-weight: 800;
+                line-height: 1.15;
+            }
+            #brandLogo {
+                background: #1d2b44;
+                border: 1px solid #36507a;
+                border-radius: 8px;
+                color: #7dd3fc;
+                font-size: 11px;
+                font-weight: 900;
+            }
             #h1 { color: #f7f9fd; font-size: 24px; font-weight: 800; }
-            #card {
+            #card, #statCard, #miniStatus {
                 background: #151f2e;
                 border: 1px solid #26344c;
                 border-radius: 8px;
             }
+            #statCard { background: #141e2d; }
             #miniStatus { background: #142031; }
             #cardTitle { font-size: 16px; font-weight: 750; color: #f5f8fc; }
             #muted { color: #93a4ba; }
             #folderPath { color: #f4f7fb; font-weight: 700; }
-            #statValue { color: #f8fbff; font-size: 24px; font-weight: 800; }
+            #statValue { color: #f8fbff; font-size: 28px; font-weight: 850; }
+            #statIcon, #toolIcon {
+                background: #21314b;
+                border: 1px solid #31476a;
+                border-radius: 8px;
+                color: #9bd2ff;
+                font-size: 10px;
+                font-weight: 900;
+            }
+            #toolIcon {
+                background: #263c7a;
+                color: white;
+            }
+            #featureText {
+                color: #b8c7db;
+                font-size: 12px;
+                padding: 1px 0;
+            }
             #bottomBar { background: #111a28; border-top: 1px solid #233046; color: #9fb0c4; }
             QToolButton {
                 text-align: left;
@@ -495,12 +643,16 @@ class MainWindow(QMainWindow):
                 padding: 7px;
             }
             QHeaderView::section {
-                background: #121b29;
+                background: #172235;
                 color: #9fb0c4;
                 border: 0;
-                padding: 7px;
+                padding: 8px;
             }
-            QTableWidget { gridline-color: #26344c; }
+            QTableWidget {
+                gridline-color: #26344c;
+                selection-background-color: #24305d;
+                alternate-background-color: #121b29;
+            }
             """
         )
 

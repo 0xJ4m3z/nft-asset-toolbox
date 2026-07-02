@@ -23,6 +23,9 @@ python run.py
 ```
 
 The app opens with a sample collection selected from `sample_collection/`.
+That demo set contains 100 tiny generated PNG assets and 100 matching metadata
+files with 8 trait types, so the dashboard has a realistic screenshot state.
+
 The first milestone includes:
 
 - Dark desktop app shell with sidebar navigation and status bar
@@ -68,7 +71,8 @@ PySide6 desktop application and shared validation helpers.
 
 ### `sample_collection`
 
-Small generic demo collection used for screenshots and local validation.
+Small generic 100-item demo collection used for screenshots and local
+validation.
 
 
 
@@ -97,5 +101,4 @@ python -m pytest tests/ -q
 
 
 MIT
-
 
