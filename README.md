@@ -1,14 +1,18 @@
 # NFT Asset Toolbox
 
-NFT Asset Toolbox is a Python toolkit for generating, processing, validating,
-and preparing NFT collection assets.
+NFT Asset Toolbox is a Python toolkit for generating, processing, validating, and preparing NFT collection assets.
 
 ![NFT Asset Toolbox Dashboard](docs/screenshots/nft_asset_toolbox_dashboard.png)
 
-The original command-line utilities remain available in `generator/`, `image/`,
-and `metadata/`. The desktop UI adds a polished dark-mode workflow around the
-same asset-processing tasks for local demos, validation, and portfolio
-screenshots.
+## Features
+
+- Desktop dashboard for inspecting a collection folder
+- Image, metadata, trait, and supply stats
+- Metadata validation and report output
+- Image resize and WebP conversion tools
+- Generator tools for layered assets and ERC-721 metadata
+- Small sample collection for local testing
+- Existing CLI scripts remain available in `generator/`, `image/`, and `metadata/`
 
 ## Desktop UI
 
@@ -24,84 +28,35 @@ Run the app:
 python run.py
 ```
 
-The app opens with a sample collection selected from `sample_collection/`.
-That demo set contains 100 tiny generated PNG assets and 100 matching metadata
-files with 8 trait types, so the dashboard has a realistic screenshot state.
+## Project Structure
 
-The first milestone includes:
-
-- Dark desktop app shell with sidebar navigation and status bar
-- Dashboard stats for images, metadata, traits, and supply
-- Collection folder selector
-- Metadata validation quick action backed by the validator logic
-- Recent activity log
-- Reports page listing generated validation reports
-- Generator and image tool pages that preserve the existing script workflows
-- Small sample collection for demos and screenshots
-
-The Generate Collection and Image Tools pages are intentionally conservative in
-this first pass: they expose the expected controls while preserving the existing
-scripts for direct command-line use.
-
-
-
-## Structure
-
-
-
-### `generator`
-
-Layered NFT asset generation with weighted rarity and ERC-721 compatible
-
-metadata output.
-
-
-
-### `image`
-
-Image processing utilities for batch resizing and optimization.
-
-
-
-### `metadata`
-
-Metadata validation tools for supply counts, trait consistency, and
-
-collection integrity.
-
-### `nft_asset_toolbox`
-
-PySide6 desktop application and shared validation helpers.
-
-### `sample_collection`
-
-Small generic 100-item demo collection used for screenshots and local
-validation.
-
-
-
-## Tech Stack
-
-
-
-- Python 3
-
-- Pillow (PIL)
-
-- JSON
-
-- PySide6
+- `nft_asset_toolbox/` - PySide6 desktop app and shared validation helpers
+- `generator/` - layered asset and metadata generation scripts
+- `image/` - batch image processing scripts
+- `metadata/` - validation, trait report, and IPFS metadata scripts
+- `sample_collection/` - small demo collection for local use
+- `tests/` - pytest coverage for validation behavior
 
 ## Tests
 
 ```bash
-python -m pytest tests/ -q
+python3 -m pytest tests/ -q
 ```
 
+## Tech Stack
 
+- Python 3
+- PySide6
+- Pillow
+- JSON
+- pytest
+
+## Notes
+
+- The desktop UI is designed for local collection asset workflows.
+- Generated reports and output folders are ignored by default.
+- The CLI scripts can still be run directly for focused batch operations.
 
 ## License
-
-
 
 MIT
