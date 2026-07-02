@@ -23,6 +23,8 @@ from PySide6.QtWidgets import (
     QMainWindow,
     QMessageBox,
     QPushButton,
+    QScrollArea,
+    QSizePolicy,
     QSpinBox,
     QStackedWidget,
     QTableWidget,
@@ -221,7 +223,8 @@ class MainWindow(QMainWindow):
         page_index: int,
     ) -> Card:
         card = Card()
-        card.setMinimumHeight(248)
+        card.setMinimumHeight(292)
+        card.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)
         header = QHBoxLayout()
         header.setContentsMargins(0, 0, 0, 0)
         header.setSpacing(12)
@@ -321,6 +324,7 @@ class MainWindow(QMainWindow):
         page.addLayout(tool_cards)
 
         lower = QHBoxLayout()
+        lower.setSpacing(14)
         activity = Card("Recent Activity")
         self.activity_table.setHorizontalHeaderLabels(["Time", "Activity", "Status", "Details"])
         self.activity_table.verticalHeader().setVisible(False)
@@ -351,11 +355,12 @@ class MainWindow(QMainWindow):
             grid.addWidget(btn, i // 3, i % 3)
         quick.layout.addLayout(grid)
         lower.addWidget(quick, 2)
-        page.addLayout(lower, 1)
+        page.addLayout(lower)
+        page.addStretch(1)
         self.add_activity("Dashboard", "Loaded sample collection", "Success", "100 images, 100 metadata")
         self.add_activity("Metadata Tools", "Validate Supply", "Success", "No missing files")
         self.add_activity("Metadata Tools", "Trait Report", "Success", "Report generated")
-        return self._wrap(page)
+        return self._scroll_wrap(page)
 
     def _generator_page(self) -> QWidget:
         page = self._page()
@@ -456,6 +461,19 @@ class MainWindow(QMainWindow):
         widget = QWidget()
         widget.setLayout(layout)
         return widget
+
+    def _scroll_wrap(self, layout: QVBoxLayout) -> QScrollArea:
+        content = QWidget()
+        content.setObjectName("dashboardContent")
+        content.setLayout(layout)
+
+        scroll = QScrollArea()
+        scroll.setObjectName("dashboardScroll")
+        scroll.setWidget(content)
+        scroll.setWidgetResizable(True)
+        scroll.setFrameShape(QFrame.NoFrame)
+        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        return scroll
 
     def _title(self, title: str, subtitle: str) -> QWidget:
         box = QWidget()
@@ -577,6 +595,7 @@ class MainWindow(QMainWindow):
             QWidget { background: transparent; color: #dbe6f4; }
             QLabel { background: transparent; }
             #mainShell { background: #0f1722; }
+            #dashboardScroll, #dashboardScroll > QWidget, #dashboardContent { background: #0f1722; }
             #sidebar { background: #101826; border-right: 1px solid #233046; }
             #brandHeader { background: transparent; }
             #brand {
