@@ -6,8 +6,8 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
-from PySide6.QtCore import Qt, QThread, QTimer, Signal
-from PySide6.QtGui import QFont
+from PySide6.QtCore import QPointF, QRectF, Qt, QThread, QTimer, Signal
+from PySide6.QtGui import QBrush, QColor, QFont, QPainter, QPen
 from PySide6.QtWidgets import (
     QApplication,
     QAbstractItemView,
@@ -75,6 +75,69 @@ class Card(QFrame):
             sub.setObjectName("muted")
             sub.setWordWrap(True)
             self.layout.addWidget(sub)
+
+
+class IconBadge(QWidget):
+    def __init__(self, icon_name: str, size: int = 36):
+        super().__init__()
+        self.icon_name = icon_name
+        self.setObjectName("iconBadge")
+        self.setFixedSize(size, size)
+
+    def paintEvent(self, event) -> None:
+        super().paintEvent(event)
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.Antialiasing)
+
+        rect = QRectF(1, 1, self.width() - 2, self.height() - 2)
+        painter.setPen(QPen(QColor("#36507a"), 1))
+        painter.setBrush(QBrush(QColor("#21314b")))
+        painter.drawRoundedRect(rect, 7, 7)
+
+        pen = QPen(QColor("#9bd2ff"), 1.8)
+        pen.setCapStyle(Qt.RoundCap)
+        pen.setJoinStyle(Qt.RoundJoin)
+        painter.setPen(pen)
+        painter.setBrush(Qt.NoBrush)
+
+        w = self.width()
+        h = self.height()
+        name = self.icon_name
+
+        if name == "images":
+            painter.drawRoundedRect(QRectF(w * 0.25, h * 0.28, w * 0.5, h * 0.42), 3, 3)
+            painter.drawEllipse(QPointF(w * 0.62, h * 0.39), 2.1, 2.1)
+            painter.drawPolyline([QPointF(w * 0.30, h * 0.65), QPointF(w * 0.43, h * 0.52), QPointF(w * 0.53, h * 0.61), QPointF(w * 0.69, h * 0.45)])
+        elif name == "metadata":
+            painter.drawRoundedRect(QRectF(w * 0.31, h * 0.22, w * 0.38, h * 0.56), 3, 3)
+            painter.drawLine(QPointF(w * 0.40, h * 0.40), QPointF(w * 0.60, h * 0.40))
+            painter.drawLine(QPointF(w * 0.40, h * 0.52), QPointF(w * 0.60, h * 0.52))
+            painter.drawLine(QPointF(w * 0.40, h * 0.64), QPointF(w * 0.54, h * 0.64))
+        elif name == "traits":
+            painter.drawRoundedRect(QRectF(w * 0.30, h * 0.28, w * 0.42, h * 0.34), 4, 4)
+            painter.drawLine(QPointF(w * 0.31, h * 0.45), QPointF(w * 0.47, h * 0.73))
+            painter.drawEllipse(QPointF(w * 0.39, h * 0.39), 1.8, 1.8)
+        elif name == "supply":
+            painter.drawRoundedRect(QRectF(w * 0.29, h * 0.25, w * 0.42, h * 0.14), 2, 2)
+            painter.drawRoundedRect(QRectF(w * 0.25, h * 0.43, w * 0.50, h * 0.14), 2, 2)
+            painter.drawRoundedRect(QRectF(w * 0.29, h * 0.61, w * 0.42, h * 0.14), 2, 2)
+        elif name == "generate":
+            painter.drawRoundedRect(QRectF(w * 0.25, h * 0.47, w * 0.34, h * 0.18), 2, 2)
+            painter.drawRoundedRect(QRectF(w * 0.33, h * 0.36, w * 0.34, h * 0.18), 2, 2)
+            painter.drawLine(QPointF(w * 0.67, h * 0.31), QPointF(w * 0.75, h * 0.23))
+            painter.drawLine(QPointF(w * 0.70, h * 0.23), QPointF(w * 0.75, h * 0.23))
+            painter.drawLine(QPointF(w * 0.75, h * 0.23), QPointF(w * 0.75, h * 0.28))
+            painter.drawLine(QPointF(w * 0.66, h * 0.68), QPointF(w * 0.72, h * 0.74))
+        elif name == "image_tools":
+            painter.drawRoundedRect(QRectF(w * 0.26, h * 0.25, w * 0.48, h * 0.42), 3, 3)
+            painter.drawLine(QPointF(w * 0.36, h * 0.73), QPointF(w * 0.64, h * 0.73))
+            painter.drawLine(QPointF(w * 0.39, h * 0.45), QPointF(w * 0.49, h * 0.55))
+            painter.drawLine(QPointF(w * 0.49, h * 0.55), QPointF(w * 0.61, h * 0.42))
+        elif name == "metadata_tools":
+            painter.drawRoundedRect(QRectF(w * 0.30, h * 0.22, w * 0.36, h * 0.56), 3, 3)
+            painter.drawLine(QPointF(w * 0.39, h * 0.42), QPointF(w * 0.47, h * 0.50))
+            painter.drawLine(QPointF(w * 0.47, h * 0.50), QPointF(w * 0.61, h * 0.36))
+            painter.drawLine(QPointF(w * 0.39, h * 0.64), QPointF(w * 0.57, h * 0.64))
 
 
 class MainWindow(QMainWindow):
@@ -186,17 +249,14 @@ class MainWindow(QMainWindow):
         layout.addWidget(text, 1)
         return header
 
-    def _stat_card(self, label: str, icon_text: str) -> tuple[Card, QLabel]:
+    def _stat_card(self, label: str, icon_name: str) -> tuple[Card, QLabel]:
         card = Card()
         card.setObjectName("statCard")
         row = QHBoxLayout()
         row.setContentsMargins(0, 0, 0, 0)
         row.setSpacing(12)
 
-        icon = QLabel(icon_text)
-        icon.setObjectName("statIcon")
-        icon.setAlignment(Qt.AlignCenter)
-        icon.setFixedSize(36, 36)
+        icon = IconBadge(icon_name, 36)
 
         value_box = QVBoxLayout()
         value_box.setContentsMargins(0, 0, 0, 0)
@@ -215,7 +275,7 @@ class MainWindow(QMainWindow):
 
     def _tool_card(
         self,
-        icon_text: str,
+        icon_name: str,
         title: str,
         body: str,
         features: list[str],
@@ -223,16 +283,13 @@ class MainWindow(QMainWindow):
         page_index: int,
     ) -> Card:
         card = Card()
-        card.setMinimumHeight(238)
+        card.setMinimumHeight(224)
         card.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)
         header = QHBoxLayout()
         header.setContentsMargins(0, 0, 0, 0)
         header.setSpacing(12)
 
-        icon = QLabel(icon_text)
-        icon.setObjectName("toolIcon")
-        icon.setAlignment(Qt.AlignCenter)
-        icon.setFixedSize(36, 36)
+        icon = IconBadge(icon_name, 36)
 
         title_label = QLabel(title)
         title_label.setObjectName("cardTitle")
@@ -284,7 +341,7 @@ class MainWindow(QMainWindow):
         page.addWidget(folder_card)
 
         stats = QHBoxLayout()
-        stat_icons = {"Images": "IMG", "Metadata": "JSON", "Traits": "TRT", "Supply": "#"}
+        stat_icons = {"Images": "images", "Metadata": "metadata", "Traits": "traits", "Supply": "supply"}
         for key in ["Images", "Metadata", "Traits", "Supply"]:
             card, value = self._stat_card(key, stat_icons[key])
             stats.addWidget(card)
@@ -295,7 +352,7 @@ class MainWindow(QMainWindow):
         tool_cards.setSpacing(14)
         for icon, title, body, features, button_text, page_index in [
             (
-                "GEN",
+                "generate",
                 "Generate Collection",
                 "Create layered NFT assets and ERC-721 metadata.",
                 ["Layered image generation", "Weighted rarity support", "Metadata output", "Custom traits"],
@@ -303,7 +360,7 @@ class MainWindow(QMainWindow):
                 1,
             ),
             (
-                "IMG",
+                "image_tools",
                 "Image Tools",
                 "Resize and convert collection images.",
                 ["Resize PNG batches", "Lossless WebP export", "Resize WebP assets", "Preserve transparency"],
@@ -311,7 +368,7 @@ class MainWindow(QMainWindow):
                 2,
             ),
             (
-                "META",
+                "metadata_tools",
                 "Metadata Tools",
                 "Validate metadata and prepare IPFS fields.",
                 ["Validate supply", "Check JSON structure", "Detect duplicate traits", "Update image fields"],
@@ -335,12 +392,17 @@ class MainWindow(QMainWindow):
         self.activity_table.setColumnWidth(0, 132)
         self.activity_table.setColumnWidth(1, 190)
         self.activity_table.setColumnWidth(2, 88)
-        self.activity_table.setMinimumHeight(118)
+        self.activity_table.setMinimumHeight(108)
         activity.layout.addWidget(self.activity_table)
         lower.addWidget(activity, 3)
 
         quick = Card("Quick Actions")
+        quick.setMaximumHeight(148)
+        quick.layout.setAlignment(Qt.AlignTop)
         grid = QGridLayout()
+        grid.setContentsMargins(0, 0, 0, 0)
+        grid.setHorizontalSpacing(8)
+        grid.setVerticalSpacing(8)
         actions = [
             ("Validate Supply", self.run_validation),
             ("Trait Report", lambda: self._placeholder("Trait Report", "Open Metadata Tools to generate validation details.")),
@@ -351,6 +413,7 @@ class MainWindow(QMainWindow):
         ]
         for i, (text, slot) in enumerate(actions):
             btn = QPushButton(text)
+            btn.setFixedHeight(32)
             btn.clicked.connect(slot)
             grid.addWidget(btn, i // 3, i % 3)
         quick.layout.addLayout(grid)
@@ -624,18 +687,6 @@ class MainWindow(QMainWindow):
             #muted { color: #93a4ba; }
             #folderPath { color: #f4f7fb; font-weight: 700; }
             #statValue { color: #f8fbff; font-size: 26px; font-weight: 850; }
-            #statIcon, #toolIcon {
-                background: #21314b;
-                border: 1px solid #31476a;
-                border-radius: 8px;
-                color: #9bd2ff;
-                font-size: 10px;
-                font-weight: 900;
-            }
-            #toolIcon {
-                background: #263c7a;
-                color: white;
-            }
             #featureText {
                 color: #b8c7db;
                 font-size: 11px;
