@@ -62,8 +62,8 @@ class Card(QFrame):
         super().__init__()
         self.setObjectName("card")
         self.layout = QVBoxLayout(self)
-        self.layout.setContentsMargins(18, 16, 18, 16)
-        self.layout.setSpacing(10)
+        self.layout.setContentsMargins(18, 14, 18, 14)
+        self.layout.setSpacing(8)
         if title:
             label = QLabel(title)
             label.setObjectName("cardTitle")
@@ -141,6 +141,7 @@ class MainWindow(QMainWindow):
 
     def _build_main_area(self) -> QWidget:
         shell = QWidget()
+        shell.setObjectName("mainShell")
         layout = QVBoxLayout(shell)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
@@ -220,34 +221,33 @@ class MainWindow(QMainWindow):
         page_index: int,
     ) -> Card:
         card = Card()
-        top = QHBoxLayout()
-        top.setContentsMargins(0, 0, 0, 0)
-        top.setSpacing(12)
+        card.setMinimumHeight(248)
+        header = QHBoxLayout()
+        header.setContentsMargins(0, 0, 0, 0)
+        header.setSpacing(12)
 
         icon = QLabel(icon_text)
         icon.setObjectName("toolIcon")
         icon.setAlignment(Qt.AlignCenter)
-        icon.setFixedSize(44, 44)
+        icon.setFixedSize(42, 42)
 
-        copy = QVBoxLayout()
-        copy.setContentsMargins(0, 0, 0, 0)
-        copy.setSpacing(4)
         title_label = QLabel(title)
         title_label.setObjectName("cardTitle")
+        title_label.setWordWrap(True)
+        header.addWidget(icon)
+        header.addWidget(title_label, 1)
+        card.layout.addLayout(header)
+
         desc = QLabel(body)
         desc.setObjectName("muted")
         desc.setWordWrap(True)
-        copy.addWidget(title_label)
-        copy.addWidget(desc)
-
-        top.addWidget(icon)
-        top.addLayout(copy, 1)
-        card.layout.addLayout(top)
+        card.layout.addWidget(desc)
 
         for feature in features:
             card.layout.addWidget(self._feature_label(feature))
 
         button = QPushButton(button_text)
+        button.setFixedHeight(36)
         button.clicked.connect(lambda checked=False, i=page_index: self._select_page(i))
         card.layout.addStretch(1)
         card.layout.addWidget(button)
@@ -289,6 +289,7 @@ class MainWindow(QMainWindow):
         page.addLayout(stats)
 
         tool_cards = QHBoxLayout()
+        tool_cards.setSpacing(14)
         for icon, title, body, features, button_text, page_index in [
             (
                 "GEN",
@@ -301,7 +302,7 @@ class MainWindow(QMainWindow):
             (
                 "IMG",
                 "Image Tools",
-                "Resize images and convert PNG assets to WebP.",
+                "Resize and convert collection images.",
                 ["Resize PNG batches", "Lossless WebP export", "Resize WebP assets", "Preserve transparency"],
                 "Open Image Tools",
                 2,
@@ -309,7 +310,7 @@ class MainWindow(QMainWindow):
             (
                 "META",
                 "Metadata Tools",
-                "Validate metadata, check traits, and prepare IPFS image fields.",
+                "Validate metadata and prepare IPFS fields.",
                 ["Validate supply", "Check JSON structure", "Detect duplicate traits", "Update image fields"],
                 "Open Metadata Tools",
                 3,
@@ -330,6 +331,7 @@ class MainWindow(QMainWindow):
         self.activity_table.setColumnWidth(0, 132)
         self.activity_table.setColumnWidth(1, 190)
         self.activity_table.setColumnWidth(2, 88)
+        self.activity_table.setMinimumHeight(150)
         activity.layout.addWidget(self.activity_table)
         lower.addWidget(activity, 3)
 
@@ -446,8 +448,8 @@ class MainWindow(QMainWindow):
 
     def _page(self) -> QVBoxLayout:
         layout = QVBoxLayout()
-        layout.setContentsMargins(26, 24, 26, 22)
-        layout.setSpacing(14)
+        layout.setContentsMargins(26, 20, 26, 16)
+        layout.setSpacing(11)
         return layout
 
     def _wrap(self, layout: QVBoxLayout) -> QWidget:
@@ -542,6 +544,7 @@ class MainWindow(QMainWindow):
         values = [datetime.now().strftime("%Y-%m-%d %H:%M"), action, status, details]
         for col, value in enumerate(values):
             self.activity_table.setItem(row, col, QTableWidgetItem(value))
+        self.activity_table.setRowHeight(row, 30)
 
     def _placeholder(self, title: str, body: str) -> None:
         self.add_activity(title, "Opened placeholder", "Info", body)
@@ -573,6 +576,7 @@ class MainWindow(QMainWindow):
             QMainWindow { background: #0f1722; }
             QWidget { background: transparent; color: #dbe6f4; }
             QLabel { background: transparent; }
+            #mainShell { background: #0f1722; }
             #sidebar { background: #101826; border-right: 1px solid #233046; }
             #brandHeader { background: transparent; }
             #brand {
@@ -597,7 +601,7 @@ class MainWindow(QMainWindow):
             }
             #statCard { background: #141e2d; }
             #miniStatus { background: #142031; }
-            #cardTitle { font-size: 16px; font-weight: 750; color: #f5f8fc; }
+            #cardTitle { font-size: 15px; font-weight: 800; color: #f5f8fc; }
             #muted { color: #93a4ba; }
             #folderPath { color: #f4f7fb; font-weight: 700; }
             #statValue { color: #f8fbff; font-size: 28px; font-weight: 850; }
@@ -616,7 +620,7 @@ class MainWindow(QMainWindow):
             #featureText {
                 color: #b8c7db;
                 font-size: 12px;
-                padding: 1px 0;
+                padding: 0 0 1px 0;
             }
             #bottomBar { background: #111a28; border-top: 1px solid #233046; color: #9fb0c4; }
             QToolButton {
@@ -631,7 +635,7 @@ class MainWindow(QMainWindow):
                 color: white;
                 border: 0;
                 border-radius: 6px;
-                padding: 9px 12px;
+                padding: 6px 12px;
                 font-weight: 700;
             }
             QPushButton:hover { background: #3f72ee; }
