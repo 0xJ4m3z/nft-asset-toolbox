@@ -1,13 +1,14 @@
 from __future__ import annotations
 
+import math
 import os
 import subprocess
 import sys
 from datetime import datetime
 from pathlib import Path
 
-from PySide6.QtCore import QPointF, QRectF, Qt, QThread, QTimer, Signal
-from PySide6.QtGui import QBrush, QColor, QFont, QPainter, QPen
+from PySide6.QtCore import QPointF, QRectF, QSize, Qt, QThread, QTimer, Signal
+from PySide6.QtGui import QBrush, QColor, QFont, QIcon, QLinearGradient, QPainter, QPen, QPixmap
 from PySide6.QtWidgets import (
     QApplication,
     QAbstractItemView,
@@ -140,6 +141,68 @@ class IconBadge(QWidget):
             painter.drawLine(QPointF(w * 0.39, h * 0.64), QPointF(w * 0.57, h * 0.64))
 
 
+class BrandLogo(QWidget):
+    def __init__(self, size: int = 42):
+        super().__init__()
+        self.setFixedSize(size, size)
+
+    def paintEvent(self, event) -> None:
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.Antialiasing)
+        w, h = self.width(), self.height()
+        cx, cy = w / 2, h / 2
+        r = min(w, h) / 2 - 2
+
+        outer = [
+            QPointF(cx + r * math.cos(math.radians(60 * i - 90)), cy + r * math.sin(math.radians(60 * i - 90)))
+            for i in range(6)
+        ]
+        gradient = QLinearGradient(0, 0, w, h)
+        gradient.setColorAt(0, QColor("#3b82f6"))
+        gradient.setColorAt(1, QColor("#8b5cf6"))
+        painter.setPen(Qt.NoPen)
+        painter.setBrush(QBrush(gradient))
+        painter.drawPolygon(outer)
+
+        inner_r = r * 0.58
+        inner = [
+            QPointF(cx + inner_r * math.cos(math.radians(60 * i - 90)), cy + inner_r * math.sin(math.radians(60 * i - 90)))
+            for i in range(6)
+        ]
+        painter.setBrush(QBrush(QColor("#0a1422")))
+        painter.drawPolygon(inner)
+
+        painter.setPen(QPen(QColor("#dce8ff")))
+        font = QFont("Inter", max(9, int(r * 0.62)), QFont.Bold)
+        painter.setFont(font)
+        painter.drawText(QRectF(0, 0, w, h), Qt.AlignCenter, "N")
+
+
+class StatusCheckIcon(QWidget):
+    def __init__(self, size: int = 20):
+        super().__init__()
+        self.setFixedSize(size, size)
+
+    def paintEvent(self, event) -> None:
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.Antialiasing)
+        w, h = self.width(), self.height()
+        painter.setPen(Qt.NoPen)
+        painter.setBrush(QBrush(QColor("#22c55e")))
+        painter.drawEllipse(QRectF(1, 1, w - 2, h - 2))
+        pen = QPen(QColor("#0a1422"), 1.8)
+        pen.setCapStyle(Qt.RoundCap)
+        pen.setJoinStyle(Qt.RoundJoin)
+        painter.setPen(pen)
+        painter.drawPolyline(
+            [
+                QPointF(w * 0.28, h * 0.52),
+                QPointF(w * 0.44, h * 0.68),
+                QPointF(w * 0.74, h * 0.32),
+            ]
+        )
+
+
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -170,39 +233,145 @@ class MainWindow(QMainWindow):
     def _build_sidebar(self) -> QWidget:
         sidebar = QFrame()
         sidebar.setObjectName("sidebar")
-        sidebar.setFixedWidth(210)
+        sidebar.setFixedWidth(244)
         layout = QVBoxLayout(sidebar)
-        layout.setContentsMargins(16, 18, 16, 14)
-        layout.setSpacing(10)
+        layout.setContentsMargins(18, 20, 18, 16)
+        layout.setSpacing(4)
 
         layout.addWidget(self._brand_header())
-        layout.addSpacing(16)
+        layout.addSpacing(22)
 
         pages = [
-            ("Dashboard", self._dashboard_page),
-            ("Generate Collection", self._generator_page),
-            ("Image Tools", self._image_tools_page),
-            ("Metadata Tools", self._metadata_tools_page),
-            ("Reports", self._reports_page),
-            ("Settings", self._settings_page),
-            ("About", self._about_page),
+            ("Dashboard", "dashboard", self._dashboard_page),
+            ("Generate Collection", "generate", self._generator_page),
+            ("Image Tools", "image_tools", self._image_tools_page),
+            ("Metadata Tools", "metadata_tools", self._metadata_tools_page),
+            ("Reports", "reports", self._reports_page),
+            ("Settings", "settings", self._settings_page),
+            ("About", "about", self._about_page),
         ]
-        for index, (name, builder) in enumerate(pages):
+        section_labels = {1: "TOOLS", 5: "SETTINGS"}
+        self.nav_icon_names: list[str] = []
+        for index, (name, icon_name, builder) in enumerate(pages):
+            if index in section_labels:
+                layout.addSpacing(14)
+                layout.addWidget(self._section_label(section_labels[index]))
+                layout.addSpacing(2)
             self.stack.addWidget(builder())
             btn = QToolButton()
-            btn.setText(name)
+            btn.setText(f"  {name}")
             btn.setCheckable(True)
-            btn.setToolButtonStyle(Qt.ToolButtonTextOnly)
+            btn.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
+            btn.setIconSize(QSize(18, 18))
+            btn.setIcon(self._nav_icon(icon_name, False))
+            btn.setFixedHeight(38)
+            btn.setCursor(Qt.PointingHandCursor)
             btn.clicked.connect(lambda checked=False, i=index: self._select_page(i))
             layout.addWidget(btn)
             self.nav_buttons.append(btn)
+            self.nav_icon_names.append(icon_name)
 
         layout.addStretch(1)
-        status = Card("All Systems Ready", f"v{__version__}")
-        status.setObjectName("miniStatus")
-        layout.addWidget(status)
+        layout.addWidget(self._status_card())
         self._select_page(0)
         return sidebar
+
+    def _section_label(self, text: str) -> QLabel:
+        label = QLabel(text)
+        label.setObjectName("navSection")
+        return label
+
+    def _status_card(self) -> QWidget:
+        card = QFrame()
+        card.setObjectName("miniStatus")
+        layout = QVBoxLayout(card)
+        layout.setContentsMargins(14, 12, 14, 12)
+        layout.setSpacing(4)
+
+        top = QHBoxLayout()
+        top.setSpacing(8)
+        top.addWidget(StatusCheckIcon(20))
+        title = QLabel("All Systems Ready")
+        title.setObjectName("statusTitle")
+        top.addWidget(title, 1)
+        layout.addLayout(top)
+
+        body = QLabel("Your toolbox is ready to go!")
+        body.setObjectName("muted")
+        body.setWordWrap(True)
+        layout.addWidget(body)
+
+        version = QLabel(f"v{__version__}")
+        version.setObjectName("statusVersion")
+        layout.addWidget(version)
+        return card
+
+    def _nav_icon(self, name: str, active: bool) -> QIcon:
+        color = "#f4f7fb" if active else "#8291a8"
+        size = 18
+        pixmap = QPixmap(size, size)
+        pixmap.fill(Qt.transparent)
+        painter = QPainter(pixmap)
+        painter.setRenderHint(QPainter.Antialiasing)
+        pen = QPen(QColor(color), 1.5)
+        pen.setCapStyle(Qt.RoundCap)
+        pen.setJoinStyle(Qt.RoundJoin)
+        painter.setPen(pen)
+        painter.setBrush(Qt.NoBrush)
+        w = h = float(size)
+
+        if name == "dashboard":
+            painter.drawPolyline(
+                [QPointF(w * 0.16, h * 0.5), QPointF(w * 0.5, h * 0.16), QPointF(w * 0.84, h * 0.5)]
+            )
+            painter.drawLine(QPointF(w * 0.26, h * 0.46), QPointF(w * 0.26, h * 0.82))
+            painter.drawLine(QPointF(w * 0.74, h * 0.46), QPointF(w * 0.74, h * 0.82))
+            painter.drawLine(QPointF(w * 0.26, h * 0.82), QPointF(w * 0.74, h * 0.82))
+        elif name == "generate":
+            painter.drawLine(QPointF(w * 0.28, h * 0.78), QPointF(w * 0.72, h * 0.28))
+            painter.drawLine(QPointF(w * 0.6, h * 0.18), QPointF(w * 0.8, h * 0.18))
+            painter.drawLine(QPointF(w * 0.8, h * 0.18), QPointF(w * 0.8, h * 0.38))
+            painter.drawLine(QPointF(w * 0.6, h * 0.18), QPointF(w * 0.8, h * 0.38))
+        elif name == "image_tools":
+            painter.drawRoundedRect(QRectF(w * 0.18, h * 0.24, w * 0.64, h * 0.52), 2.4, 2.4)
+            painter.drawEllipse(QPointF(w * 0.38, h * 0.42), 1.5, 1.5)
+            painter.drawPolyline(
+                [
+                    QPointF(w * 0.22, h * 0.68),
+                    QPointF(w * 0.42, h * 0.52),
+                    QPointF(w * 0.56, h * 0.62),
+                    QPointF(w * 0.78, h * 0.4),
+                ]
+            )
+        elif name == "metadata_tools":
+            painter.drawRoundedRect(QRectF(w * 0.28, h * 0.16, w * 0.44, h * 0.68), 2.4, 2.4)
+            painter.drawLine(QPointF(w * 0.38, h * 0.36), QPointF(w * 0.62, h * 0.36))
+            painter.drawLine(QPointF(w * 0.38, h * 0.5), QPointF(w * 0.62, h * 0.5))
+            painter.drawLine(QPointF(w * 0.38, h * 0.64), QPointF(w * 0.54, h * 0.64))
+        elif name == "reports":
+            painter.drawLine(QPointF(w * 0.2, h * 0.82), QPointF(w * 0.2, h * 0.32))
+            painter.drawLine(QPointF(w * 0.2, h * 0.82), QPointF(w * 0.84, h * 0.82))
+            painter.drawRect(QRectF(w * 0.32, h * 0.58, w * 0.12, h * 0.24))
+            painter.drawRect(QRectF(w * 0.5, h * 0.46, w * 0.12, h * 0.36))
+            painter.drawRect(QRectF(w * 0.68, h * 0.32, w * 0.12, h * 0.5))
+        elif name == "settings":
+            painter.drawEllipse(QPointF(w * 0.5, h * 0.5), w * 0.16, w * 0.16)
+            for i in range(8):
+                angle = math.pi / 4 * i
+                x1 = w * 0.5 + math.cos(angle) * w * 0.28
+                y1 = h * 0.5 + math.sin(angle) * w * 0.28
+                x2 = w * 0.5 + math.cos(angle) * w * 0.4
+                y2 = h * 0.5 + math.sin(angle) * w * 0.4
+                painter.drawLine(QPointF(x1, y1), QPointF(x2, y2))
+        elif name == "about":
+            painter.drawEllipse(QPointF(w * 0.5, h * 0.5), w * 0.32, w * 0.32)
+            painter.drawLine(QPointF(w * 0.5, h * 0.44), QPointF(w * 0.5, h * 0.68))
+            dot_pen = QPen(QColor(color), 2.2)
+            dot_pen.setCapStyle(Qt.RoundCap)
+            painter.setPen(dot_pen)
+            painter.drawPoint(QPointF(w * 0.5, h * 0.32))
+        painter.end()
+        return QIcon(pixmap)
 
     def _build_main_area(self) -> QWidget:
         shell = QWidget()
@@ -233,20 +402,23 @@ class MainWindow(QMainWindow):
         header = QWidget()
         header.setObjectName("brandHeader")
         layout = QHBoxLayout(header)
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(10)
+        layout.setContentsMargins(2, 0, 2, 0)
+        layout.setSpacing(12)
 
-        logo = QLabel("NFT")
-        logo.setObjectName("brandLogo")
-        logo.setAlignment(Qt.AlignCenter)
-        logo.setFixedSize(36, 36)
+        logo = BrandLogo(42)
 
-        text = QLabel("NFT Asset Toolbox")
-        text.setObjectName("brand")
-        text.setWordWrap(True)
+        text_box = QVBoxLayout()
+        text_box.setContentsMargins(0, 0, 0, 0)
+        text_box.setSpacing(0)
+        line1 = QLabel("ASSET")
+        line1.setObjectName("brandLine1")
+        line2 = QLabel("TOOLBOX")
+        line2.setObjectName("brandLine2")
+        text_box.addWidget(line1)
+        text_box.addWidget(line2)
 
         layout.addWidget(logo)
-        layout.addWidget(text, 1)
+        layout.addLayout(text_box, 1)
         return header
 
     def _stat_card(self, label: str, icon_name: str) -> tuple[Card, QLabel]:
@@ -566,7 +738,9 @@ class MainWindow(QMainWindow):
     def _select_page(self, index: int) -> None:
         self.stack.setCurrentIndex(index)
         for i, btn in enumerate(self.nav_buttons):
-            btn.setChecked(i == index)
+            active = i == index
+            btn.setChecked(active)
+            btn.setIcon(self._nav_icon(self.nav_icon_names[i], active))
 
     def choose_folder(self) -> None:
         folder = QFileDialog.getExistingDirectory(self, "Select Collection Folder", str(self.collection_dir))
@@ -656,30 +830,33 @@ class MainWindow(QMainWindow):
             QLabel { background: transparent; }
             #mainShell { background: #0f1722; }
             #dashboardScroll, #dashboardScroll > QWidget, #dashboardContent { background: #0f1722; }
-            #sidebar { background: #101826; border-right: 1px solid #233046; }
-            #brandHeader { background: transparent; }
-            #brand {
-                color: #f4f7fb;
-                font-size: 14px;
-                font-weight: 800;
-                line-height: 1.15;
+            #sidebar {
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #0a1422, stop:1 #07101b);
+                border-right: 1px solid #253044;
             }
-            #brandLogo {
-                background: #1d2b44;
-                border: 1px solid #36507a;
-                border-radius: 8px;
-                color: #7dd3fc;
-                font-size: 11px;
-                font-weight: 900;
+            #brandHeader { background: transparent; }
+            #brandLine1, #brandLine2 {
+                color: #f4f7fb;
+                font-size: 15px;
+                font-weight: 800;
+            }
+            #brandLine2 { color: #9aa8ba; }
+            #navSection {
+                color: #64748b;
+                font-size: 10px;
+                font-weight: 800;
+                padding: 2px 10px;
             }
             #h1 { color: #f7f9fd; font-size: 23px; font-weight: 800; }
             #card, #statCard, #miniStatus {
-                background: #151f2e;
-                border: 1px solid #26344c;
+                background: #141b2a;
+                border: 1px solid #253044;
                 border-radius: 8px;
             }
             #statCard { background: #141e2d; }
-            #miniStatus { background: #142031; }
+            #miniStatus { background: #111827; border: 1px solid #253044; border-radius: 10px; }
+            #statusTitle { color: #f4f7fb; font-size: 13px; font-weight: 800; }
+            #statusVersion { color: #64748b; font-size: 11px; font-weight: 700; margin-top: 2px; }
             #cardTitle { font-size: 14px; font-weight: 800; color: #f5f8fc; }
             #muted { color: #93a4ba; }
             #folderPath { color: #f4f7fb; font-weight: 700; }
@@ -690,13 +867,20 @@ class MainWindow(QMainWindow):
                 padding: 0;
             }
             #bottomBar { background: #111a28; border-top: 1px solid #233046; color: #9fb0c4; }
-            QToolButton {
+            #sidebar QToolButton {
                 text-align: left;
-                padding: 10px 12px;
-                border-radius: 6px;
-                color: #bac8da;
+                padding: 8px 10px;
+                border-radius: 8px;
+                color: #9aa8ba;
+                font-weight: 600;
+                background: transparent;
+                border: none;
             }
-            QToolButton:checked, QToolButton:hover { background: #24305d; color: white; }
+            #sidebar QToolButton:hover { background: #141b2a; color: #dbe6f4; }
+            #sidebar QToolButton:checked {
+                background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #3b82f6, stop:1 #8b5cf6);
+                color: #ffffff;
+            }
             QPushButton {
                 background: #315fd6;
                 color: white;
