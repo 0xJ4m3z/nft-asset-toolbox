@@ -42,6 +42,8 @@ from nft_asset_toolbox.core import ValidationResult, get_collection_stats, valid
 
 ROOT = Path(__file__).resolve().parents[1]
 SAMPLE_COLLECTION = ROOT / "sample_collection"
+SAMPLE_OUTPUT = SAMPLE_COLLECTION / "output"
+DEFAULT_COLLECTION = SAMPLE_OUTPUT if SAMPLE_OUTPUT.exists() else SAMPLE_COLLECTION
 REPORTS_DIR = ROOT / "reports"
 
 
@@ -208,7 +210,7 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.setWindowTitle("NFT Asset Toolbox")
         self.resize(1280, 800)
-        self.collection_dir = SAMPLE_COLLECTION
+        self.collection_dir = DEFAULT_COLLECTION
         self.worker: ValidationWorker | None = None
 
         self.stack = QStackedWidget()

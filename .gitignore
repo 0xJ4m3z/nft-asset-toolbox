@@ -5,10 +5,10 @@ __pycache__/
 .pytest_cache/
 .venv/
 
-# Generated app output
-reports/
-new_metadata/
-output/
-resized_png/
-resized_webp/
-webp/
+# Generated app output (root-level ad hoc runs only; sample_collection/ demo data is tracked)
+/reports/
+/new_metadata/
+/output/
+/resized_png/
+/resized_webp/
+/webp/

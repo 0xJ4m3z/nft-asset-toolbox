@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import csv
 import json
 from collections import Counter, defaultdict
 from dataclasses import dataclass, field
@@ -7,6 +8,8 @@ from datetime import datetime
 from pathlib import Path
 
 from metadata.validate_supply import collect_ids, trait_signature
+
+LAYER_FOLDER_NAMES = ("sample_assets", "layers")
 
 
 @dataclass
@@ -29,6 +32,7 @@ class ValidationResult:
     trait_count: int = 0
     report_path: Path | None = None
     errors: list[str] = field(default_factory=list)
+    trait_counts: dict[str, Counter[str]] = field(default_factory=dict)
 
     @property
     def ok(self) -> bool:
@@ -46,10 +50,44 @@ def metadata_dir_for(collection_dir: Path) -> Path:
     return nested if nested.exists() else collection_dir
 
 
+def images_dir_for(collection_dir: Path) -> Path:
+    nested = collection_dir / "images"
+    return nested if nested.exists() else collection_dir
+
+
+def layers_dir_for(collection_dir: Path) -> Path | None:
+    for name in LAYER_FOLDER_NAMES:
+        candidate = collection_dir / name
+        if candidate.is_dir():
+            return candidate
+    return None
+
+
+def discover_trait_layers(collection_dir: Path) -> dict[str, list[Path]]:
+    """Map trait folder name -> sorted PNG asset paths, from sample_assets/ or layers/."""
+    layers_dir = layers_dir_for(Path(collection_dir))
+    if layers_dir is None:
+        return {}
+
+    traits: dict[str, list[Path]] = {}
+    for trait_folder in sorted(p for p in layers_dir.iterdir() if p.is_dir()):
+        assets = sorted(trait_folder.glob("*.png"))
+        if assets:
+            traits[trait_folder.name] = assets
+    return traits
+
+
+def list_preview_images(collection_dir: Path, limit: int = 6) -> list[Path]:
+    images_dir = images_dir_for(Path(collection_dir))
+    images = collect_ids(images_dir, is_image=True)
+    return [images[token_id] for token_id in sorted(images)[:limit]]
+
+
 def get_collection_stats(collection_dir: Path) -> CollectionStats:
     collection_dir = Path(collection_dir)
     metadata_dir = metadata_dir_for(collection_dir)
-    images = collect_ids(collection_dir, is_image=True)
+    images_dir = images_dir_for(collection_dir)
+    images = collect_ids(images_dir, is_image=True)
     metadata = collect_ids(metadata_dir)
     traits: set[str] = set()
 
@@ -73,7 +111,8 @@ def get_collection_stats(collection_dir: Path) -> CollectionStats:
 def validate_collection(collection_dir: Path, reports_dir: Path | None = None) -> ValidationResult:
     collection_dir = Path(collection_dir)
     metadata_dir = metadata_dir_for(collection_dir)
-    image_files = collect_ids(collection_dir, is_image=True)
+    images_dir = images_dir_for(collection_dir)
+    image_files = collect_ids(images_dir, is_image=True)
     meta_files = collect_ids(metadata_dir)
 
     result = ValidationResult(
@@ -124,6 +163,7 @@ def validate_collection(collection_dir: Path, reports_dir: Path | None = None) -
                 trait_counts[trait_type][value] += 1
 
     result.trait_count = len(traits)
+    result.trait_counts = dict(trait_counts)
 
     if reports_dir is not None:
         reports_dir.mkdir(parents=True, exist_ok=True)
@@ -133,6 +173,35 @@ def validate_collection(collection_dir: Path, reports_dir: Path | None = None) -
         result.report_path = report_path
 
     return result
+
+
+def write_trait_frequency_csv(result: ValidationResult, output_path: Path) -> Path:
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    with output_path.open("w", newline="", encoding="utf-8") as f:
+        writer = csv.writer(f)
+        writer.writerow(["trait_type", "value", "count", "percentage"])
+        total = result.metadata_found or 1
+        for trait in sorted(result.trait_counts, key=str.lower):
+            for value, count in result.trait_counts[trait].most_common():
+                pct = round((count / total) * 100, 2)
+                writer.writerow([trait, value, count, pct])
+    return output_path
+
+
+def write_validation_report_csv(result: ValidationResult, output_path: Path) -> Path:
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    with output_path.open("w", newline="", encoding="utf-8") as f:
+        writer = csv.writer(f)
+        writer.writerow(["metric", "value"])
+        writer.writerow(["images_found", result.images_found])
+        writer.writerow(["metadata_found", result.metadata_found])
+        writer.writerow(["json_valid", result.json_valid])
+        writer.writerow(["missing_images", len(result.missing_images)])
+        writer.writerow(["missing_metadata", len(result.missing_metadata)])
+        writer.writerow(["duplicate_trait_combinations", len(result.duplicate_trait_combinations)])
+        writer.writerow(["trait_count", result.trait_count])
+        writer.writerow(["status", "PASS" if result.ok else "FAIL"])
+    return output_path
 
 
 def format_validation_report(

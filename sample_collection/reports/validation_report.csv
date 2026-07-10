@@ -1,0 +1,9 @@
+metric,value
+images_found,100
+metadata_found,100
+json_valid,True
+missing_images,0
+missing_metadata,0
+duplicate_trait_combinations,0
+trait_count,5
+status,PASS
