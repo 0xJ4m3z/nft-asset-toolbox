@@ -561,6 +561,8 @@ class MainWindow(QMainWindow):
         card.layout.addLayout(row)
         return card, value
 
+    TOOL_CARD_HEIGHT = 318
+
     def _tool_card(
         self,
         icon_name: str,
@@ -572,13 +574,14 @@ class MainWindow(QMainWindow):
         preview: QWidget | None = None,
     ) -> Card:
         card = Card()
-        card.setMinimumHeight(224)
-        card.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)
+        card.setFixedHeight(self.TOOL_CARD_HEIGHT)
+        card.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        card.layout.setSpacing(8)
         header = QHBoxLayout()
         header.setContentsMargins(0, 0, 0, 0)
         header.setSpacing(12)
 
-        icon = IconBadge(icon_name, 36)
+        icon = IconBadge(icon_name, 34)
 
         title_label = QLabel(title)
         title_label.setObjectName("cardTitle")
@@ -595,15 +598,23 @@ class MainWindow(QMainWindow):
         if preview is not None:
             card.layout.addWidget(preview)
 
-        for feature in features:
-            card.layout.addWidget(self._feature_label(feature))
+        card.layout.addWidget(self._feature_list(features))
+        card.layout.addStretch(1)
 
         button = QPushButton(button_text)
         button.setFixedHeight(32)
         button.clicked.connect(lambda checked=False, i=page_index: self._select_page(i))
-        card.layout.addStretch(1)
         card.layout.addWidget(button)
         return card
+
+    def _feature_list(self, features: list[str]) -> QWidget:
+        box = QWidget()
+        layout = QVBoxLayout(box)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(2)
+        for feature in features:
+            layout.addWidget(self._feature_label(feature))
+        return box
 
     def _feature_label(self, text: str) -> QLabel:
         label = QLabel(f"+ {text}")
@@ -649,7 +660,7 @@ class MainWindow(QMainWindow):
                 "generate",
                 "Generate Collection",
                 "Create layered NFT assets and ERC-721 metadata.",
-                ["Layered image generation", "ERC-721 metadata output", "100 unique trait combinations", "Weighted rarity support"],
+                ["Layered image generation", "ERC-721 metadata output", "100 generated sample NFTs", "Weighted rarity support"],
                 "Open Generator",
                 1,
                 self._generate_preview(),
@@ -687,6 +698,7 @@ class MainWindow(QMainWindow):
         lower = QHBoxLayout()
         lower.setSpacing(14)
         activity = Card("Recent Activity")
+        activity.setFixedHeight(168)
         self.activity_table.setHorizontalHeaderLabels(["Time", "Activity", "Status", "Details"])
         self.activity_table.verticalHeader().setVisible(False)
         self.activity_table.horizontalHeader().setStretchLastSection(True)
@@ -696,12 +708,11 @@ class MainWindow(QMainWindow):
         self.activity_table.setColumnWidth(0, 132)
         self.activity_table.setColumnWidth(1, 190)
         self.activity_table.setColumnWidth(2, 88)
-        self.activity_table.setMinimumHeight(108)
         activity.layout.addWidget(self.activity_table)
         lower.addWidget(activity, 3)
 
         quick = Card("Quick Actions")
-        quick.setMaximumHeight(148)
+        quick.setFixedHeight(168)
         quick.layout.setAlignment(Qt.AlignTop)
         grid = QGridLayout()
         grid.setContentsMargins(0, 0, 0, 0)
@@ -742,8 +753,8 @@ class MainWindow(QMainWindow):
         header = QFrame()
         header.setObjectName("dashboardHeader")
         layout = QVBoxLayout(header)
-        layout.setContentsMargins(20, 16, 20, 16)
-        layout.setSpacing(4)
+        layout.setContentsMargins(18, 12, 18, 12)
+        layout.setSpacing(2)
         title = QLabel("Welcome to NFT Asset Toolbox")
         title.setObjectName("dashboardTitle")
         subtitle = QLabel("Generate, process, validate, and prepare NFT collection assets.")
@@ -753,13 +764,18 @@ class MainWindow(QMainWindow):
         return header
 
     def _generate_preview(self) -> QWidget:
+        grid_widget = QWidget()
+        grid = QGridLayout(grid_widget)
+        grid.setContentsMargins(0, 0, 0, 0)
+        grid.setHorizontalSpacing(7)
+        grid.setVerticalSpacing(7)
+        self.generate_thumbs = [PreviewThumbnail(58) for _ in range(4)]
+        for i, thumb in enumerate(self.generate_thumbs):
+            grid.addWidget(thumb, i // 2, i % 2)
         row = QWidget()
         layout = QHBoxLayout(row)
-        layout.setContentsMargins(0, 2, 0, 2)
-        layout.setSpacing(8)
-        self.generate_thumbs = [PreviewThumbnail(52) for _ in range(4)]
-        for thumb in self.generate_thumbs:
-            layout.addWidget(thumb)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.addWidget(grid_widget)
         layout.addStretch(1)
         self._refresh_generate_thumbs()
         return row
@@ -775,9 +791,9 @@ class MainWindow(QMainWindow):
     def _image_tools_preview(self) -> QWidget:
         row = QWidget()
         layout = QHBoxLayout(row)
-        layout.setContentsMargins(0, 2, 0, 2)
+        layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
-        self.image_tools_checker = CheckerPreview(72)
+        self.image_tools_checker = CheckerPreview(100)
         layout.addWidget(self.image_tools_checker)
         layout.addStretch(1)
         self._refresh_image_tools_preview()
@@ -795,7 +811,7 @@ class MainWindow(QMainWindow):
         self.metadata_snippet.setObjectName("metaSnippet")
         font = QFont("Monospace")
         font.setStyleHint(QFont.Monospace)
-        font.setPointSize(9)
+        font.setPointSize(8)
         self.metadata_snippet.setFont(font)
         self._refresh_metadata_preview()
         return self.metadata_snippet
@@ -803,7 +819,7 @@ class MainWindow(QMainWindow):
     def _refresh_metadata_preview(self) -> None:
         self.metadata_snippet.setText(self._load_metadata_snippet(self.collection_dir))
 
-    def _load_metadata_snippet(self, collection_dir: Path, limit_attrs: int = 3) -> str:
+    def _load_metadata_snippet(self, collection_dir: Path, limit_attrs: int = 2) -> str:
         try:
             meta_dir = metadata_dir_for(Path(collection_dir))
 
@@ -1094,7 +1110,7 @@ class MainWindow(QMainWindow):
                 border: 1px solid #2c3b60;
                 border-radius: 12px;
             }
-            #dashboardTitle { color: #f7f9fd; font-size: 24px; font-weight: 800; }
+            #dashboardTitle { color: #f7f9fd; font-size: 21px; font-weight: 800; }
             #card, #statCard, #miniStatus {
                 background: #141b2a;
                 border: 1px solid #253044;
@@ -1118,7 +1134,7 @@ class MainWindow(QMainWindow):
                 border: 1px solid #253044;
                 border-radius: 6px;
                 color: #9bd2ff;
-                padding: 8px 10px;
+                padding: 5px 8px;
             }
             #bottomBar { background: #111a28; border-top: 1px solid #233046; color: #9fb0c4; }
             #sidebar QToolButton {
