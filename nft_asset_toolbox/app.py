@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import math
 import os
 import subprocess
@@ -8,7 +9,7 @@ from datetime import datetime
 from pathlib import Path
 
 from PySide6.QtCore import QPointF, QRectF, QSize, Qt, QThread, QTimer, Signal
-from PySide6.QtGui import QBrush, QColor, QFont, QIcon, QLinearGradient, QPainter, QPen, QPixmap
+from PySide6.QtGui import QBrush, QColor, QFont, QIcon, QLinearGradient, QPainter, QPainterPath, QPen, QPixmap
 from PySide6.QtWidgets import (
     QApplication,
     QAbstractItemView,
@@ -37,7 +38,13 @@ from PySide6.QtWidgets import (
 )
 
 from nft_asset_toolbox import __version__
-from nft_asset_toolbox.core import ValidationResult, get_collection_stats, validate_collection
+from nft_asset_toolbox.core import (
+    ValidationResult,
+    get_collection_stats,
+    list_preview_images,
+    metadata_dir_for,
+    validate_collection,
+)
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -80,6 +87,19 @@ class Card(QFrame):
             self.layout.addWidget(sub)
 
 
+ICON_ACCENTS = {
+    "images": ("#3b82f6", "#1a2b4a"),
+    "generate": ("#3b82f6", "#1a2b4a"),
+    "metadata": ("#8b5cf6", "#291f4d"),
+    "metadata_tools": ("#8b5cf6", "#291f4d"),
+    "traits": ("#22c55e", "#123322"),
+    "image_tools": ("#22c55e", "#123322"),
+    "supply": ("#eab308", "#332a12"),
+    "folder": ("#eab308", "#332a12"),
+}
+DEFAULT_ACCENT = ("#9bd2ff", "#21314b")
+
+
 class IconBadge(QWidget):
     def __init__(self, icon_name: str, size: int = 36):
         super().__init__()
@@ -89,15 +109,16 @@ class IconBadge(QWidget):
 
     def paintEvent(self, event) -> None:
         super().paintEvent(event)
+        stroke, fill = ICON_ACCENTS.get(self.icon_name, DEFAULT_ACCENT)
         painter = QPainter(self)
         painter.setRenderHint(QPainter.Antialiasing)
 
         rect = QRectF(1, 1, self.width() - 2, self.height() - 2)
-        painter.setPen(QPen(QColor("#36507a"), 1))
-        painter.setBrush(QBrush(QColor("#21314b")))
+        painter.setPen(QPen(QColor(stroke).lighter(140), 1))
+        painter.setBrush(QBrush(QColor(fill)))
         painter.drawRoundedRect(rect, 7, 7)
 
-        pen = QPen(QColor("#9bd2ff"), 1.8)
+        pen = QPen(QColor(stroke), 1.8)
         pen.setCapStyle(Qt.RoundCap)
         pen.setJoinStyle(Qt.RoundJoin)
         painter.setPen(pen)
@@ -107,7 +128,12 @@ class IconBadge(QWidget):
         h = self.height()
         name = self.icon_name
 
-        if name == "images":
+        if name == "folder":
+            painter.drawRoundedRect(QRectF(w * 0.22, h * 0.32, w * 0.56, h * 0.4), 3, 3)
+            painter.drawLine(QPointF(w * 0.22, h * 0.36), QPointF(w * 0.4, h * 0.36))
+            painter.drawLine(QPointF(w * 0.4, h * 0.36), QPointF(w * 0.46, h * 0.28))
+            painter.drawLine(QPointF(w * 0.46, h * 0.28), QPointF(w * 0.62, h * 0.28))
+        elif name == "images":
             painter.drawRoundedRect(QRectF(w * 0.25, h * 0.28, w * 0.5, h * 0.42), 3, 3)
             painter.drawEllipse(QPointF(w * 0.62, h * 0.39), 2.1, 2.1)
             painter.drawPolyline([QPointF(w * 0.30, h * 0.65), QPointF(w * 0.43, h * 0.52), QPointF(w * 0.53, h * 0.61), QPointF(w * 0.69, h * 0.45)])
@@ -203,6 +229,94 @@ class StatusCheckIcon(QWidget):
                 QPointF(w * 0.74, h * 0.32),
             ]
         )
+
+
+class PreviewThumbnail(QLabel):
+    def __init__(self, size: int = 64, radius: int = 9):
+        super().__init__()
+        self._size = size
+        self._radius = radius
+        self.setFixedSize(size, size)
+        self.setObjectName("previewThumb")
+        self.set_image(None)
+
+    def set_image(self, path: Path | None) -> None:
+        source = QPixmap(str(path)) if path is not None else QPixmap()
+        if source.isNull():
+            self.setPixmap(self._placeholder_pixmap())
+            return
+
+        scaled = source.scaled(
+            self._size, self._size, Qt.KeepAspectRatioByExpanding, Qt.SmoothTransformation
+        )
+        x = max(0, (scaled.width() - self._size) // 2)
+        y = max(0, (scaled.height() - self._size) // 2)
+        cropped = scaled.copy(x, y, self._size, self._size)
+
+        rounded = QPixmap(self._size, self._size)
+        rounded.fill(Qt.transparent)
+        painter = QPainter(rounded)
+        painter.setRenderHint(QPainter.Antialiasing)
+        clip = QPainterPath()
+        clip.addRoundedRect(QRectF(0, 0, self._size, self._size), self._radius, self._radius)
+        painter.setClipPath(clip)
+        painter.drawPixmap(0, 0, cropped)
+        painter.end()
+        self.setPixmap(rounded)
+
+    def _placeholder_pixmap(self) -> QPixmap:
+        size = self._size
+        pixmap = QPixmap(size, size)
+        pixmap.fill(Qt.transparent)
+        painter = QPainter(pixmap)
+        painter.setRenderHint(QPainter.Antialiasing)
+
+        gradient = QLinearGradient(0, 0, size, size)
+        gradient.setColorAt(0, QColor("#1d2b44"))
+        gradient.setColorAt(1, QColor("#141b2a"))
+        painter.setPen(QPen(QColor("#33456b"), 1))
+        painter.setBrush(QBrush(gradient))
+        painter.drawRoundedRect(QRectF(0.5, 0.5, size - 1, size - 1), self._radius, self._radius)
+
+        pen = QPen(QColor("#5a749e"), 1.6)
+        pen.setCapStyle(Qt.RoundCap)
+        pen.setJoinStyle(Qt.RoundJoin)
+        painter.setPen(pen)
+        painter.setBrush(Qt.NoBrush)
+        w = h = size
+        painter.drawRoundedRect(QRectF(w * 0.26, h * 0.3, w * 0.48, h * 0.4), 3, 3)
+        painter.drawEllipse(QPointF(w * 0.4, h * 0.42), 2.3, 2.3)
+        painter.drawPolyline(
+            [
+                QPointF(w * 0.32, h * 0.62),
+                QPointF(w * 0.45, h * 0.5),
+                QPointF(w * 0.55, h * 0.58),
+                QPointF(w * 0.68, h * 0.4),
+            ]
+        )
+        painter.end()
+        return pixmap
+
+
+class CheckerPreview(QWidget):
+    def __init__(self, size: int = 76, cell: int = 8):
+        super().__init__()
+        self._size = size
+        self._cell = cell
+        self.setFixedSize(size, size)
+        self.thumb = PreviewThumbnail(size - 6, radius=8)
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(3, 3, 3, 3)
+        layout.addWidget(self.thumb)
+
+    def paintEvent(self, event) -> None:
+        painter = QPainter(self)
+        light = QColor("#233046")
+        dark = QColor("#1a2536")
+        for row in range(0, self._size, self._cell):
+            for col in range(0, self._size, self._cell):
+                color = light if ((row // self._cell) + (col // self._cell)) % 2 == 0 else dark
+                painter.fillRect(col, row, self._cell, self._cell, color)
 
 
 class MainWindow(QMainWindow):
@@ -455,6 +569,7 @@ class MainWindow(QMainWindow):
         features: list[str],
         button_text: str,
         page_index: int,
+        preview: QWidget | None = None,
     ) -> Card:
         card = Card()
         card.setMinimumHeight(224)
@@ -477,6 +592,9 @@ class MainWindow(QMainWindow):
         desc.setWordWrap(True)
         card.layout.addWidget(desc)
 
+        if preview is not None:
+            card.layout.addWidget(preview)
+
         for feature in features:
             card.layout.addWidget(self._feature_label(feature))
 
@@ -494,19 +612,24 @@ class MainWindow(QMainWindow):
 
     def _dashboard_page(self) -> QWidget:
         page = self._page()
-        header = QLabel("Generate, process, validate, and prepare NFT collection assets.")
-        header.setObjectName("muted")
-        page.addWidget(header)
+        page.addWidget(self._dashboard_header())
 
         folder_card = Card()
         row = QHBoxLayout()
+        row.setSpacing(12)
+        folder_icon = IconBadge("folder", 34)
+        text_box = QVBoxLayout()
+        text_box.setSpacing(1)
+        folder_hint = QLabel("Current Collection Folder")
+        folder_hint.setObjectName("muted")
         self.folder_label.setObjectName("folderPath")
+        self.folder_label.setWordWrap(True)
+        text_box.addWidget(folder_hint)
+        text_box.addWidget(self.folder_label)
         change = QPushButton("Change Folder")
         change.clicked.connect(self.choose_folder)
-        folder_hint = QLabel("Current collection folder")
-        folder_hint.setObjectName("muted")
-        row.addWidget(folder_hint)
-        row.addWidget(self.folder_label, 1)
+        row.addWidget(folder_icon)
+        row.addLayout(text_box, 1)
         row.addWidget(change)
         folder_card.layout.addLayout(row)
         page.addWidget(folder_card)
@@ -521,14 +644,15 @@ class MainWindow(QMainWindow):
 
         tool_cards = QHBoxLayout()
         tool_cards.setSpacing(14)
-        for icon, title, body, features, button_text, page_index in [
+        tool_specs = [
             (
                 "generate",
                 "Generate Collection",
                 "Create layered NFT assets and ERC-721 metadata.",
-                ["Layered image generation", "Weighted rarity support", "Metadata output", "Custom traits"],
+                ["Layered image generation", "ERC-721 metadata output", "100 unique trait combinations", "Weighted rarity support"],
                 "Open Generator",
                 1,
+                self._generate_preview(),
             ),
             (
                 "image_tools",
@@ -537,17 +661,26 @@ class MainWindow(QMainWindow):
                 ["Resize PNG batches", "Lossless WebP export", "Resize WebP assets", "Preserve transparency"],
                 "Open Image Tools",
                 2,
+                self._image_tools_preview(),
             ),
             (
                 "metadata_tools",
                 "Metadata Tools",
                 "Validate metadata and prepare IPFS fields.",
-                ["Validate supply", "Check JSON structure", "Detect duplicate traits", "Update image fields"],
+                [
+                    "Validate supply & files",
+                    "Validate JSON structure",
+                    "Trait uniqueness check",
+                    "Generate trait reports",
+                    "Update IPFS CID in metadata",
+                ],
                 "Open Metadata Tools",
                 3,
+                self._metadata_preview(),
             ),
-        ]:
-            card = self._tool_card(icon, title, body, features, button_text, page_index)
+        ]
+        for icon, title, body, features, button_text, page_index, preview in tool_specs:
+            card = self._tool_card(icon, title, body, features, button_text, page_index, preview=preview)
             tool_cards.addWidget(card)
         page.addLayout(tool_cards)
 
@@ -575,16 +708,24 @@ class MainWindow(QMainWindow):
         grid.setHorizontalSpacing(8)
         grid.setVerticalSpacing(8)
         actions = [
-            ("Validate Supply", self.run_validation),
-            ("Trait Report", lambda: self._placeholder("Trait Report", "Open Metadata Tools to generate validation details.")),
-            ("Update IPFS CID", lambda: self._select_page(3)),
-            ("Resize PNG", lambda: self._select_page(2)),
-            ("PNG to WebP", lambda: self._select_page(2)),
-            ("Resize WebP", lambda: self._select_page(2)),
+            ("Validate Supply", "metadata_tools", self.run_validation),
+            (
+                "Trait Report",
+                "reports",
+                lambda: self._placeholder("Trait Report", "Open Metadata Tools to generate validation details."),
+            ),
+            ("Update IPFS CID", "metadata_tools", lambda: self._select_page(3)),
+            ("Resize PNG", "image_tools", lambda: self._select_page(2)),
+            ("PNG to WebP", "image_tools", lambda: self._select_page(2)),
+            ("Resize WebP", "image_tools", lambda: self._select_page(2)),
         ]
-        for i, (text, slot) in enumerate(actions):
+        for i, (text, icon_name, slot) in enumerate(actions):
             btn = QPushButton(text)
-            btn.setFixedHeight(32)
+            btn.setObjectName("quickActionBtn")
+            btn.setIcon(self._nav_icon(icon_name, True))
+            btn.setIconSize(QSize(15, 15))
+            btn.setFixedHeight(34)
+            btn.setCursor(Qt.PointingHandCursor)
             btn.clicked.connect(slot)
             grid.addWidget(btn, i // 3, i % 3)
         quick.layout.addLayout(grid)
@@ -592,9 +733,103 @@ class MainWindow(QMainWindow):
         page.addLayout(lower)
         page.addStretch(1)
         self.add_activity("Dashboard", "Loaded sample collection", "Success", "100 images, 100 metadata")
-        self.add_activity("Metadata Tools", "Validate Supply", "Success", "No missing files")
-        self.add_activity("Metadata Tools", "Trait Report", "Success", "Report generated")
+        self.add_activity("Generator", "Generated 100 sample NFTs", "Success", "sample_collection/output")
+        self.add_activity("Metadata Tools", "Validated supply", "Success", "No missing files")
+        self.add_activity("Metadata Tools", "Generated trait report", "Success", "trait_frequency.csv")
         return self._scroll_wrap(page)
+
+    def _dashboard_header(self) -> QWidget:
+        header = QFrame()
+        header.setObjectName("dashboardHeader")
+        layout = QVBoxLayout(header)
+        layout.setContentsMargins(20, 16, 20, 16)
+        layout.setSpacing(4)
+        title = QLabel("Welcome to NFT Asset Toolbox")
+        title.setObjectName("dashboardTitle")
+        subtitle = QLabel("Generate, process, validate, and prepare NFT collection assets.")
+        subtitle.setObjectName("muted")
+        layout.addWidget(title)
+        layout.addWidget(subtitle)
+        return header
+
+    def _generate_preview(self) -> QWidget:
+        row = QWidget()
+        layout = QHBoxLayout(row)
+        layout.setContentsMargins(0, 2, 0, 2)
+        layout.setSpacing(8)
+        self.generate_thumbs = [PreviewThumbnail(52) for _ in range(4)]
+        for thumb in self.generate_thumbs:
+            layout.addWidget(thumb)
+        layout.addStretch(1)
+        self._refresh_generate_thumbs()
+        return row
+
+    def _refresh_generate_thumbs(self) -> None:
+        try:
+            images = list_preview_images(self.collection_dir, limit=len(self.generate_thumbs))
+        except Exception:
+            images = []
+        for i, thumb in enumerate(self.generate_thumbs):
+            thumb.set_image(images[i] if i < len(images) else None)
+
+    def _image_tools_preview(self) -> QWidget:
+        row = QWidget()
+        layout = QHBoxLayout(row)
+        layout.setContentsMargins(0, 2, 0, 2)
+        layout.setSpacing(0)
+        self.image_tools_checker = CheckerPreview(72)
+        layout.addWidget(self.image_tools_checker)
+        layout.addStretch(1)
+        self._refresh_image_tools_preview()
+        return row
+
+    def _refresh_image_tools_preview(self) -> None:
+        try:
+            images = list_preview_images(self.collection_dir, limit=1)
+        except Exception:
+            images = []
+        self.image_tools_checker.thumb.set_image(images[0] if images else None)
+
+    def _metadata_preview(self) -> QWidget:
+        self.metadata_snippet = QLabel()
+        self.metadata_snippet.setObjectName("metaSnippet")
+        font = QFont("Monospace")
+        font.setStyleHint(QFont.Monospace)
+        font.setPointSize(9)
+        self.metadata_snippet.setFont(font)
+        self._refresh_metadata_preview()
+        return self.metadata_snippet
+
+    def _refresh_metadata_preview(self) -> None:
+        self.metadata_snippet.setText(self._load_metadata_snippet(self.collection_dir))
+
+    def _load_metadata_snippet(self, collection_dir: Path, limit_attrs: int = 3) -> str:
+        try:
+            meta_dir = metadata_dir_for(Path(collection_dir))
+
+            def sort_key(path: Path):
+                try:
+                    return (0, int(path.stem))
+                except ValueError:
+                    return (1, path.stem)
+
+            candidates = sorted(meta_dir.glob("*.json"), key=sort_key)
+            data = json.loads(candidates[0].read_text(encoding="utf-8")) if candidates else {}
+        except Exception:
+            data = {}
+
+        attrs = data.get("attributes", []) if isinstance(data, dict) else []
+        lines = ["{", f'  "name": "{data.get("name", "Sample NFT")}",', '  "attributes": [']
+        for attr in attrs[:limit_attrs]:
+            if not isinstance(attr, dict):
+                continue
+            lines.append(f'    {{"trait_type": "{attr.get("trait_type", "")}", "value": "{attr.get("value", "")}"}},')
+        remaining = len(attrs) - limit_attrs
+        if remaining > 0:
+            lines.append(f"    ... (+{remaining} more)")
+        lines.append("  ]")
+        lines.append("}")
+        return "\n".join(lines)
 
     def _generator_page(self) -> QWidget:
         page = self._page()
@@ -758,6 +993,9 @@ class MainWindow(QMainWindow):
         self.stat_labels["Metadata"].setText(str(stats.metadata))
         self.stat_labels["Traits"].setText(str(stats.traits))
         self.stat_labels["Supply"].setText(str(stats.supply))
+        self._refresh_generate_thumbs()
+        self._refresh_image_tools_preview()
+        self._refresh_metadata_preview()
 
     def run_validation(self) -> None:
         if self.worker and self.worker.isRunning():
@@ -850,6 +1088,13 @@ class MainWindow(QMainWindow):
                 padding: 2px 10px;
             }
             #h1 { color: #f7f9fd; font-size: 23px; font-weight: 800; }
+            #dashboardHeader {
+                background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
+                    stop:0 #1a2447, stop:0.55 #1e1f3d, stop:1 #172436);
+                border: 1px solid #2c3b60;
+                border-radius: 12px;
+            }
+            #dashboardTitle { color: #f7f9fd; font-size: 24px; font-weight: 800; }
             #card, #statCard, #miniStatus {
                 background: #141b2a;
                 border: 1px solid #253044;
@@ -861,12 +1106,19 @@ class MainWindow(QMainWindow):
             #statusVersion { color: #64748b; font-size: 11px; font-weight: 700; margin-top: 2px; }
             #cardTitle { font-size: 14px; font-weight: 800; color: #f5f8fc; }
             #muted { color: #93a4ba; }
-            #folderPath { color: #f4f7fb; font-weight: 700; }
+            #folderPath { color: #f4f7fb; font-weight: 700; font-size: 14px; }
             #statValue { color: #f8fbff; font-size: 26px; font-weight: 850; }
             #featureText {
                 color: #b8c7db;
                 font-size: 11px;
                 padding: 0;
+            }
+            #metaSnippet {
+                background: #0e1520;
+                border: 1px solid #253044;
+                border-radius: 6px;
+                color: #9bd2ff;
+                padding: 8px 10px;
             }
             #bottomBar { background: #111a28; border-top: 1px solid #233046; color: #9fb0c4; }
             #sidebar QToolButton {
@@ -892,6 +1144,18 @@ class MainWindow(QMainWindow):
                 font-weight: 700;
             }
             QPushButton:hover { background: #3f72ee; }
+            QPushButton#quickActionBtn {
+                background: #171f30;
+                border: 1px solid #29385a;
+                color: #dbe6f4;
+                text-align: left;
+                padding: 6px 10px;
+                font-weight: 600;
+            }
+            QPushButton#quickActionBtn:hover {
+                background: #1c2740;
+                border: 1px solid #3b82f6;
+            }
             QLineEdit, QSpinBox, QComboBox, QTextEdit, QTableWidget {
                 background: #101826;
                 border: 1px solid #2a3952;
