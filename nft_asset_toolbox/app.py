@@ -74,8 +74,8 @@ class Card(QFrame):
         super().__init__()
         self.setObjectName("card")
         self.layout = QVBoxLayout(self)
-        self.layout.setContentsMargins(16, 12, 16, 12)
-        self.layout.setSpacing(6)
+        self.layout.setContentsMargins(14, 8, 14, 8)
+        self.layout.setSpacing(5)
         if title:
             label = QLabel(title)
             label.setObjectName("cardTitle")
@@ -544,11 +544,11 @@ class MainWindow(QMainWindow):
         row.setContentsMargins(0, 0, 0, 0)
         row.setSpacing(12)
 
-        icon = IconBadge(icon_name, 36)
+        icon = IconBadge(icon_name, 30)
 
         value_box = QVBoxLayout()
         value_box.setContentsMargins(0, 0, 0, 0)
-        value_box.setSpacing(2)
+        value_box.setSpacing(0)
         value = QLabel("0")
         value.setObjectName("statValue")
         label_widget = QLabel(label)
@@ -561,7 +561,7 @@ class MainWindow(QMainWindow):
         card.layout.addLayout(row)
         return card, value
 
-    TOOL_CARD_HEIGHT = 318
+    TOOL_CARD_HEIGHT = 282
 
     def _tool_card(
         self,
@@ -576,12 +576,12 @@ class MainWindow(QMainWindow):
         card = Card()
         card.setFixedHeight(self.TOOL_CARD_HEIGHT)
         card.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-        card.layout.setSpacing(8)
+        card.layout.setSpacing(6)
         header = QHBoxLayout()
         header.setContentsMargins(0, 0, 0, 0)
-        header.setSpacing(12)
+        header.setSpacing(10)
 
-        icon = IconBadge(icon_name, 34)
+        icon = IconBadge(icon_name, 30)
 
         title_label = QLabel(title)
         title_label.setObjectName("cardTitle")
@@ -627,10 +627,10 @@ class MainWindow(QMainWindow):
 
         folder_card = Card()
         row = QHBoxLayout()
-        row.setSpacing(12)
-        folder_icon = IconBadge("folder", 34)
+        row.setSpacing(10)
+        folder_icon = IconBadge("folder", 28)
         text_box = QVBoxLayout()
-        text_box.setSpacing(1)
+        text_box.setSpacing(0)
         folder_hint = QLabel("Current Collection Folder")
         folder_hint.setObjectName("muted")
         self.folder_label.setObjectName("folderPath")
@@ -698,7 +698,7 @@ class MainWindow(QMainWindow):
         lower = QHBoxLayout()
         lower.setSpacing(14)
         activity = Card("Recent Activity")
-        activity.setFixedHeight(168)
+        activity.setFixedHeight(196)
         self.activity_table.setHorizontalHeaderLabels(["Time", "Activity", "Status", "Details"])
         self.activity_table.verticalHeader().setVisible(False)
         self.activity_table.horizontalHeader().setStretchLastSection(True)
@@ -712,12 +712,11 @@ class MainWindow(QMainWindow):
         lower.addWidget(activity, 3)
 
         quick = Card("Quick Actions")
-        quick.setFixedHeight(168)
-        quick.layout.setAlignment(Qt.AlignTop)
+        quick.setFixedHeight(196)
         grid = QGridLayout()
         grid.setContentsMargins(0, 0, 0, 0)
         grid.setHorizontalSpacing(8)
-        grid.setVerticalSpacing(8)
+        grid.setVerticalSpacing(14)
         actions = [
             ("Validate Supply", "metadata_tools", self.run_validation),
             (
@@ -735,11 +734,12 @@ class MainWindow(QMainWindow):
             btn.setObjectName("quickActionBtn")
             btn.setIcon(self._nav_icon(icon_name, True))
             btn.setIconSize(QSize(15, 15))
-            btn.setFixedHeight(34)
+            btn.setFixedHeight(40)
             btn.setCursor(Qt.PointingHandCursor)
             btn.clicked.connect(slot)
             grid.addWidget(btn, i // 3, i % 3)
         quick.layout.addLayout(grid)
+        quick.layout.addStretch(1)
         lower.addWidget(quick, 2)
         page.addLayout(lower)
         page.addStretch(1)
@@ -753,8 +753,8 @@ class MainWindow(QMainWindow):
         header = QFrame()
         header.setObjectName("dashboardHeader")
         layout = QVBoxLayout(header)
-        layout.setContentsMargins(18, 12, 18, 12)
-        layout.setSpacing(2)
+        layout.setContentsMargins(16, 8, 16, 8)
+        layout.setSpacing(1)
         title = QLabel("Welcome to NFT Asset Toolbox")
         title.setObjectName("dashboardTitle")
         subtitle = QLabel("Generate, process, validate, and prepare NFT collection assets.")
@@ -938,8 +938,8 @@ class MainWindow(QMainWindow):
 
     def _page(self) -> QVBoxLayout:
         layout = QVBoxLayout()
-        layout.setContentsMargins(26, 16, 26, 20)
-        layout.setSpacing(9)
+        layout.setContentsMargins(24, 12, 24, 14)
+        layout.setSpacing(7)
         return layout
 
     def _wrap(self, layout: QVBoxLayout) -> QWidget:
@@ -1110,7 +1110,7 @@ class MainWindow(QMainWindow):
                 border: 1px solid #2c3b60;
                 border-radius: 12px;
             }
-            #dashboardTitle { color: #f7f9fd; font-size: 21px; font-weight: 800; }
+            #dashboardTitle { color: #f7f9fd; font-size: 19px; font-weight: 800; }
             #card, #statCard, #miniStatus {
                 background: #141b2a;
                 border: 1px solid #253044;
