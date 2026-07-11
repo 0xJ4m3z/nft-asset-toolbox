@@ -515,7 +515,7 @@ class MainWindow(QMainWindow):
         card.layout.addLayout(row)
         return card, value
 
-    TOOL_CARD_HEIGHT = 282
+    TOOL_CARD_HEIGHT = 330
 
     def _tool_card(
         self,
@@ -724,12 +724,15 @@ class MainWindow(QMainWindow):
         layout.addWidget(subtitle)
         return header
 
+    HERO_IMAGE_SIZE = 96
+
     def _hero_preview(self, image_path: Path) -> QWidget:
         row = QWidget()
+        row.setFixedHeight(self.HERO_IMAGE_SIZE)
         layout = QHBoxLayout(row)
         layout.setContentsMargins(0, 0, 0, 0)
         path = image_path if image_path.exists() else None
-        layout.addWidget(RoundedImage(path, 104, radius=12))
+        layout.addWidget(RoundedImage(path, self.HERO_IMAGE_SIZE, radius=12))
         layout.addStretch(1)
         return row
 
