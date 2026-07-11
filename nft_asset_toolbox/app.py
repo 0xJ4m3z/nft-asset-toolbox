@@ -9,7 +9,7 @@ from datetime import datetime
 from pathlib import Path
 
 from PySide6.QtCore import QPointF, QRectF, QSize, Qt, QThread, QTimer, Signal
-from PySide6.QtGui import QBrush, QColor, QFont, QIcon, QLinearGradient, QPainter, QPen, QPixmap
+from PySide6.QtGui import QBrush, QColor, QFont, QIcon, QLinearGradient, QPainter, QPainterPath, QPen, QPixmap
 from PySide6.QtWidgets import (
     QApplication,
     QAbstractItemView,
@@ -51,6 +51,8 @@ SAMPLE_COLLECTION = ROOT / "sample_collection"
 SAMPLE_OUTPUT = SAMPLE_COLLECTION / "output"
 DEFAULT_COLLECTION = SAMPLE_OUTPUT if SAMPLE_OUTPUT.exists() else SAMPLE_COLLECTION
 REPORTS_DIR = ROOT / "reports"
+GENERATE_PREVIEW_IMAGE = SAMPLE_OUTPUT / "images" / "1.png"
+IMAGE_TOOLS_PREVIEW_IMAGE = SAMPLE_OUTPUT / "images" / "6.png"
 
 
 class ValidationWorker(QThread):
@@ -200,9 +202,9 @@ class BrandLogo(QWidget):
         painter.drawPolygon(inner)
 
         painter.setPen(QPen(QColor("#dce8ff")))
-        font = QFont("Inter", max(9, int(r * 0.62)), QFont.Bold)
+        font = QFont("Inter", max(6, int(r * 0.32)), QFont.Bold)
         painter.setFont(font)
-        painter.drawText(QRectF(0, 0, w, h), Qt.AlignCenter, "N")
+        painter.drawText(QRectF(0, 0, w, h), Qt.AlignCenter, "NFT")
 
 
 class StatusCheckIcon(QWidget):
@@ -230,55 +232,66 @@ class StatusCheckIcon(QWidget):
         )
 
 
-class HeroVisual(QWidget):
-    def __init__(self, icon_name: str, start_color: str, end_color: str, width: int = 108, height: int = 88):
+class RoundedImage(QLabel):
+    def __init__(self, path: Path | None, size: int = 96, radius: int = 12):
         super().__init__()
-        self.icon_name = icon_name
-        self.start_color = start_color
-        self.end_color = end_color
-        self.setFixedSize(width, height)
+        self.setFixedSize(size, size)
+        pixmap = QPixmap(str(path)) if path is not None else QPixmap()
+        if pixmap.isNull():
+            self.setPixmap(self._placeholder(size, radius))
+            return
+
+        scaled = pixmap.scaled(size, size, Qt.KeepAspectRatioByExpanding, Qt.SmoothTransformation)
+        x = max(0, (scaled.width() - size) // 2)
+        y = max(0, (scaled.height() - size) // 2)
+        cropped = scaled.copy(x, y, size, size)
+
+        rounded = QPixmap(size, size)
+        rounded.fill(Qt.transparent)
+        painter = QPainter(rounded)
+        painter.setRenderHint(QPainter.Antialiasing)
+        clip = QPainterPath()
+        clip.addRoundedRect(QRectF(0, 0, size, size), radius, radius)
+        painter.setClipPath(clip)
+        painter.drawPixmap(0, 0, cropped)
+        painter.end()
+        self.setPixmap(rounded)
+
+    @staticmethod
+    def _placeholder(size: int, radius: int) -> QPixmap:
+        pixmap = QPixmap(size, size)
+        pixmap.fill(Qt.transparent)
+        painter = QPainter(pixmap)
+        painter.setRenderHint(QPainter.Antialiasing)
+        gradient = QLinearGradient(0, 0, size, size)
+        gradient.setColorAt(0, QColor("#1d2b44"))
+        gradient.setColorAt(1, QColor("#141b2a"))
+        painter.setPen(QPen(QColor("#33456b"), 1))
+        painter.setBrush(QBrush(gradient))
+        painter.drawRoundedRect(QRectF(0.5, 0.5, size - 1, size - 1), radius, radius)
+        painter.end()
+        return pixmap
+
+
+class CheckerBackdrop(QWidget):
+    def __init__(self, path: Path | None, size: int = 96, cell: int = 8):
+        super().__init__()
+        self._size = size
+        self._cell = cell
+        self.setFixedSize(size, size)
+        image = RoundedImage(path, size - 6, radius=10)
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(3, 3, 3, 3)
+        layout.addWidget(image)
 
     def paintEvent(self, event) -> None:
         painter = QPainter(self)
-        painter.setRenderHint(QPainter.Antialiasing)
-        w, h = self.width(), self.height()
-
-        gradient = QLinearGradient(0, 0, w, h)
-        gradient.setColorAt(0, QColor(self.start_color))
-        gradient.setColorAt(1, QColor(self.end_color))
-        painter.setPen(Qt.NoPen)
-        painter.setBrush(QBrush(gradient))
-        painter.drawRoundedRect(QRectF(0, 0, w, h), 14, 14)
-
-        pen = QPen(QColor(255, 255, 255, 235), 2.4)
-        pen.setCapStyle(Qt.RoundCap)
-        pen.setJoinStyle(Qt.RoundJoin)
-        painter.setPen(pen)
-        painter.setBrush(Qt.NoBrush)
-
-        if self.icon_name == "generate":
-            painter.drawLine(QPointF(w * 0.32, h * 0.74), QPointF(w * 0.68, h * 0.26))
-            painter.drawLine(QPointF(w * 0.56, h * 0.18), QPointF(w * 0.76, h * 0.18))
-            painter.drawLine(QPointF(w * 0.76, h * 0.18), QPointF(w * 0.76, h * 0.38))
-            painter.drawLine(QPointF(w * 0.56, h * 0.18), QPointF(w * 0.76, h * 0.38))
-            self._sparkle(painter, w * 0.24, h * 0.34, 5)
-            self._sparkle(painter, w * 0.7, h * 0.66, 4)
-        elif self.icon_name == "image_tools":
-            painter.drawRoundedRect(QRectF(w * 0.22, h * 0.2, w * 0.56, h * 0.54), 4, 4)
-            painter.drawEllipse(QPointF(w * 0.62, h * 0.36), 3.4, 3.4)
-            painter.drawPolyline(
-                [
-                    QPointF(w * 0.28, h * 0.64),
-                    QPointF(w * 0.42, h * 0.48),
-                    QPointF(w * 0.54, h * 0.58),
-                    QPointF(w * 0.72, h * 0.4),
-                ]
-            )
-        painter.end()
-
-    def _sparkle(self, painter: QPainter, cx: float, cy: float, r: float) -> None:
-        painter.drawLine(QPointF(cx - r, cy), QPointF(cx + r, cy))
-        painter.drawLine(QPointF(cx, cy - r), QPointF(cx, cy + r))
+        light = QColor("#233046")
+        dark = QColor("#1a2536")
+        for row in range(0, self._size, self._cell):
+            for col in range(0, self._size, self._cell):
+                color = light if ((row // self._cell) + (col // self._cell)) % 2 == 0 else dark
+                painter.fillRect(col, row, self._cell, self._cell, color)
 
 
 class MainWindow(QMainWindow):
@@ -385,7 +398,7 @@ class MainWindow(QMainWindow):
         return card
 
     def _nav_icon(self, name: str, active: bool) -> QIcon:
-        color = "#f4f7fb" if active else "#8291a8"
+        color = "#cfe0ff" if active else "#8291a8"
         size = 18
         pixmap = QPixmap(size, size)
         pixmap.fill(Qt.transparent)
@@ -483,7 +496,7 @@ class MainWindow(QMainWindow):
         layout.setContentsMargins(2, 0, 2, 0)
         layout.setSpacing(12)
 
-        logo = BrandLogo(42)
+        logo = BrandLogo(46)
 
         text_box = QVBoxLayout()
         text_box.setContentsMargins(0, 0, 0, 0)
@@ -534,6 +547,7 @@ class MainWindow(QMainWindow):
         button_text: str,
         page_index: int,
         preview: QWidget | None = None,
+        button_accent: str = "blue",
     ) -> Card:
         card = Card()
         card.setFixedHeight(self.TOOL_CARD_HEIGHT)
@@ -564,6 +578,7 @@ class MainWindow(QMainWindow):
         card.layout.addStretch(1)
 
         button = QPushButton(button_text)
+        button.setObjectName(f"btn{button_accent.capitalize()}")
         button.setFixedHeight(32)
         button.clicked.connect(lambda checked=False, i=page_index: self._select_page(i))
         card.layout.addWidget(button)
@@ -587,6 +602,9 @@ class MainWindow(QMainWindow):
         page = self._page()
         page.addWidget(self._dashboard_header())
 
+        top_row = QHBoxLayout()
+        top_row.setSpacing(12)
+
         folder_card = Card()
         row = QHBoxLayout()
         row.setSpacing(10)
@@ -605,15 +623,14 @@ class MainWindow(QMainWindow):
         row.addLayout(text_box, 1)
         row.addWidget(change)
         folder_card.layout.addLayout(row)
-        page.addWidget(folder_card)
+        top_row.addWidget(folder_card, 3)
 
-        stats = QHBoxLayout()
         stat_icons = {"Images": "images", "Metadata": "metadata", "Traits": "traits", "Supply": "supply"}
         for key in ["Images", "Metadata", "Traits", "Supply"]:
             card, value = self._stat_card(key, stat_icons[key])
-            stats.addWidget(card)
+            top_row.addWidget(card, 1)
             self.stat_labels[key] = value
-        page.addLayout(stats)
+        page.addLayout(top_row)
 
         tool_cards = QHBoxLayout()
         tool_cards.setSpacing(14)
@@ -626,6 +643,7 @@ class MainWindow(QMainWindow):
                 "Open Generator",
                 1,
                 self._generate_preview(),
+                "purple",
             ),
             (
                 "image_tools",
@@ -635,6 +653,7 @@ class MainWindow(QMainWindow):
                 "Open Image Tools",
                 2,
                 self._image_tools_preview(),
+                "blue",
             ),
             (
                 "metadata_tools",
@@ -650,10 +669,11 @@ class MainWindow(QMainWindow):
                 "Open Metadata Tools",
                 3,
                 self._metadata_preview(),
+                "green",
             ),
         ]
-        for icon, title, body, features, button_text, page_index, preview in tool_specs:
-            card = self._tool_card(icon, title, body, features, button_text, page_index, preview=preview)
+        for icon, title, body, features, button_text, page_index, preview, accent in tool_specs:
+            card = self._tool_card(icon, title, body, features, button_text, page_index, preview=preview, button_accent=accent)
             tool_cards.addWidget(card)
         page.addLayout(tool_cards)
 
@@ -729,7 +749,8 @@ class MainWindow(QMainWindow):
         row = QWidget()
         layout = QHBoxLayout(row)
         layout.setContentsMargins(0, 0, 0, 0)
-        layout.addWidget(HeroVisual("generate", "#7c3aed", "#4c1d95"))
+        path = GENERATE_PREVIEW_IMAGE if GENERATE_PREVIEW_IMAGE.exists() else None
+        layout.addWidget(RoundedImage(path, 92, radius=12))
         layout.addStretch(1)
         return row
 
@@ -737,7 +758,8 @@ class MainWindow(QMainWindow):
         row = QWidget()
         layout = QHBoxLayout(row)
         layout.setContentsMargins(0, 0, 0, 0)
-        layout.addWidget(HeroVisual("image_tools", "#3b82f6", "#1e40af"))
+        path = IMAGE_TOOLS_PREVIEW_IMAGE if IMAGE_TOOLS_PREVIEW_IMAGE.exists() else None
+        layout.addWidget(CheckerBackdrop(path, 92))
         layout.addStretch(1)
         return row
 
@@ -1081,8 +1103,9 @@ class MainWindow(QMainWindow):
             }
             #sidebar QToolButton:hover { background: #141b2a; color: #dbe6f4; }
             #sidebar QToolButton:checked {
-                background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #3b82f6, stop:1 #8b5cf6);
-                color: #ffffff;
+                background: rgba(99, 130, 220, 32);
+                border: 1px solid rgba(99, 130, 220, 90);
+                color: #cfe0ff;
             }
             QPushButton {
                 background: #315fd6;
@@ -1093,6 +1116,12 @@ class MainWindow(QMainWindow):
                 font-weight: 700;
             }
             QPushButton:hover { background: #3f72ee; }
+            QPushButton#btnPurple { background: #7c3aed; }
+            QPushButton#btnPurple:hover { background: #8b5cf6; }
+            QPushButton#btnBlue { background: #2563eb; }
+            QPushButton#btnBlue:hover { background: #3b82f6; }
+            QPushButton#btnGreen { background: #16a34a; }
+            QPushButton#btnGreen:hover { background: #22c55e; }
             QPushButton#quickActionBtn {
                 background: #171f30;
                 border: 1px solid #29385a;
