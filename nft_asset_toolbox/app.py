@@ -9,7 +9,7 @@ from datetime import datetime
 from pathlib import Path
 
 from PySide6.QtCore import QPointF, QRectF, QSize, Qt, QThread, QTimer, Signal
-from PySide6.QtGui import QBrush, QColor, QFont, QIcon, QLinearGradient, QPainter, QPainterPath, QPen, QPixmap
+from PySide6.QtGui import QBrush, QColor, QFont, QIcon, QLinearGradient, QPainter, QPen, QPixmap
 from PySide6.QtWidgets import (
     QApplication,
     QAbstractItemView,
@@ -41,7 +41,6 @@ from nft_asset_toolbox import __version__
 from nft_asset_toolbox.core import (
     ValidationResult,
     get_collection_stats,
-    list_preview_images,
     metadata_dir_for,
     validate_collection,
 )
@@ -231,92 +230,55 @@ class StatusCheckIcon(QWidget):
         )
 
 
-class PreviewThumbnail(QLabel):
-    def __init__(self, size: int = 64, radius: int = 9):
+class HeroVisual(QWidget):
+    def __init__(self, icon_name: str, start_color: str, end_color: str, width: int = 108, height: int = 88):
         super().__init__()
-        self._size = size
-        self._radius = radius
-        self.setFixedSize(size, size)
-        self.setObjectName("previewThumb")
-        self.set_image(None)
+        self.icon_name = icon_name
+        self.start_color = start_color
+        self.end_color = end_color
+        self.setFixedSize(width, height)
 
-    def set_image(self, path: Path | None) -> None:
-        source = QPixmap(str(path)) if path is not None else QPixmap()
-        if source.isNull():
-            self.setPixmap(self._placeholder_pixmap())
-            return
-
-        scaled = source.scaled(
-            self._size, self._size, Qt.KeepAspectRatioByExpanding, Qt.SmoothTransformation
-        )
-        x = max(0, (scaled.width() - self._size) // 2)
-        y = max(0, (scaled.height() - self._size) // 2)
-        cropped = scaled.copy(x, y, self._size, self._size)
-
-        rounded = QPixmap(self._size, self._size)
-        rounded.fill(Qt.transparent)
-        painter = QPainter(rounded)
+    def paintEvent(self, event) -> None:
+        painter = QPainter(self)
         painter.setRenderHint(QPainter.Antialiasing)
-        clip = QPainterPath()
-        clip.addRoundedRect(QRectF(0, 0, self._size, self._size), self._radius, self._radius)
-        painter.setClipPath(clip)
-        painter.drawPixmap(0, 0, cropped)
-        painter.end()
-        self.setPixmap(rounded)
+        w, h = self.width(), self.height()
 
-    def _placeholder_pixmap(self) -> QPixmap:
-        size = self._size
-        pixmap = QPixmap(size, size)
-        pixmap.fill(Qt.transparent)
-        painter = QPainter(pixmap)
-        painter.setRenderHint(QPainter.Antialiasing)
-
-        gradient = QLinearGradient(0, 0, size, size)
-        gradient.setColorAt(0, QColor("#1d2b44"))
-        gradient.setColorAt(1, QColor("#141b2a"))
-        painter.setPen(QPen(QColor("#33456b"), 1))
+        gradient = QLinearGradient(0, 0, w, h)
+        gradient.setColorAt(0, QColor(self.start_color))
+        gradient.setColorAt(1, QColor(self.end_color))
+        painter.setPen(Qt.NoPen)
         painter.setBrush(QBrush(gradient))
-        painter.drawRoundedRect(QRectF(0.5, 0.5, size - 1, size - 1), self._radius, self._radius)
+        painter.drawRoundedRect(QRectF(0, 0, w, h), 14, 14)
 
-        pen = QPen(QColor("#5a749e"), 1.6)
+        pen = QPen(QColor(255, 255, 255, 235), 2.4)
         pen.setCapStyle(Qt.RoundCap)
         pen.setJoinStyle(Qt.RoundJoin)
         painter.setPen(pen)
         painter.setBrush(Qt.NoBrush)
-        w = h = size
-        painter.drawRoundedRect(QRectF(w * 0.26, h * 0.3, w * 0.48, h * 0.4), 3, 3)
-        painter.drawEllipse(QPointF(w * 0.4, h * 0.42), 2.3, 2.3)
-        painter.drawPolyline(
-            [
-                QPointF(w * 0.32, h * 0.62),
-                QPointF(w * 0.45, h * 0.5),
-                QPointF(w * 0.55, h * 0.58),
-                QPointF(w * 0.68, h * 0.4),
-            ]
-        )
+
+        if self.icon_name == "generate":
+            painter.drawLine(QPointF(w * 0.32, h * 0.74), QPointF(w * 0.68, h * 0.26))
+            painter.drawLine(QPointF(w * 0.56, h * 0.18), QPointF(w * 0.76, h * 0.18))
+            painter.drawLine(QPointF(w * 0.76, h * 0.18), QPointF(w * 0.76, h * 0.38))
+            painter.drawLine(QPointF(w * 0.56, h * 0.18), QPointF(w * 0.76, h * 0.38))
+            self._sparkle(painter, w * 0.24, h * 0.34, 5)
+            self._sparkle(painter, w * 0.7, h * 0.66, 4)
+        elif self.icon_name == "image_tools":
+            painter.drawRoundedRect(QRectF(w * 0.22, h * 0.2, w * 0.56, h * 0.54), 4, 4)
+            painter.drawEllipse(QPointF(w * 0.62, h * 0.36), 3.4, 3.4)
+            painter.drawPolyline(
+                [
+                    QPointF(w * 0.28, h * 0.64),
+                    QPointF(w * 0.42, h * 0.48),
+                    QPointF(w * 0.54, h * 0.58),
+                    QPointF(w * 0.72, h * 0.4),
+                ]
+            )
         painter.end()
-        return pixmap
 
-
-class CheckerPreview(QWidget):
-    def __init__(self, size: int = 76, cell: int = 8):
-        super().__init__()
-        self._size = size
-        self._cell = cell
-        self.setFixedSize(size, size)
-        self.thumb = PreviewThumbnail(size - 6, radius=8)
-        layout = QVBoxLayout(self)
-        layout.setContentsMargins(3, 3, 3, 3)
-        layout.addWidget(self.thumb)
-
-    def paintEvent(self, event) -> None:
-        painter = QPainter(self)
-        light = QColor("#233046")
-        dark = QColor("#1a2536")
-        for row in range(0, self._size, self._cell):
-            for col in range(0, self._size, self._cell):
-                color = light if ((row // self._cell) + (col // self._cell)) % 2 == 0 else dark
-                painter.fillRect(col, row, self._cell, self._cell, color)
+    def _sparkle(self, painter: QPainter, cx: float, cy: float, r: float) -> None:
+        painter.drawLine(QPointF(cx - r, cy), QPointF(cx + r, cy))
+        painter.drawLine(QPointF(cx, cy - r), QPointF(cx, cy + r))
 
 
 class MainWindow(QMainWindow):
@@ -659,8 +621,8 @@ class MainWindow(QMainWindow):
             (
                 "generate",
                 "Generate Collection",
-                "Create layered NFT assets and ERC-721 metadata.",
-                ["Layered image generation", "ERC-721 metadata output", "100 generated sample NFTs", "Weighted rarity support"],
+                "Create unique NFT images using layered assets and rarity rules.",
+                ["Layered image generation", "Weighted rarity support", "Metadata output", "Custom trait configuration"],
                 "Open Generator",
                 1,
                 self._generate_preview(),
@@ -668,8 +630,8 @@ class MainWindow(QMainWindow):
             (
                 "image_tools",
                 "Image Tools",
-                "Resize and convert collection images.",
-                ["Resize PNG batches", "Lossless WebP export", "Resize WebP assets", "Preserve transparency"],
+                "Batch process collection images for optimal quality and size.",
+                ["Resize PNG images", "Convert PNG to WebP", "Resize WebP images", "Preserve transparency"],
                 "Open Image Tools",
                 2,
                 self._image_tools_preview(),
@@ -677,7 +639,7 @@ class MainWindow(QMainWindow):
             (
                 "metadata_tools",
                 "Metadata Tools",
-                "Validate metadata and prepare IPFS fields.",
+                "Validate, analyze, and update your NFT metadata files.",
                 [
                     "Validate supply & files",
                     "Validate JSON structure",
@@ -764,47 +726,20 @@ class MainWindow(QMainWindow):
         return header
 
     def _generate_preview(self) -> QWidget:
-        grid_widget = QWidget()
-        grid = QGridLayout(grid_widget)
-        grid.setContentsMargins(0, 0, 0, 0)
-        grid.setHorizontalSpacing(7)
-        grid.setVerticalSpacing(7)
-        self.generate_thumbs = [PreviewThumbnail(58) for _ in range(4)]
-        for i, thumb in enumerate(self.generate_thumbs):
-            grid.addWidget(thumb, i // 2, i % 2)
         row = QWidget()
         layout = QHBoxLayout(row)
         layout.setContentsMargins(0, 0, 0, 0)
-        layout.addWidget(grid_widget)
+        layout.addWidget(HeroVisual("generate", "#7c3aed", "#4c1d95"))
         layout.addStretch(1)
-        self._refresh_generate_thumbs()
         return row
-
-    def _refresh_generate_thumbs(self) -> None:
-        try:
-            images = list_preview_images(self.collection_dir, limit=len(self.generate_thumbs))
-        except Exception:
-            images = []
-        for i, thumb in enumerate(self.generate_thumbs):
-            thumb.set_image(images[i] if i < len(images) else None)
 
     def _image_tools_preview(self) -> QWidget:
         row = QWidget()
         layout = QHBoxLayout(row)
         layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(0)
-        self.image_tools_checker = CheckerPreview(100)
-        layout.addWidget(self.image_tools_checker)
+        layout.addWidget(HeroVisual("image_tools", "#3b82f6", "#1e40af"))
         layout.addStretch(1)
-        self._refresh_image_tools_preview()
         return row
-
-    def _refresh_image_tools_preview(self) -> None:
-        try:
-            images = list_preview_images(self.collection_dir, limit=1)
-        except Exception:
-            images = []
-        self.image_tools_checker.thumb.set_image(images[0] if images else None)
 
     def _metadata_preview(self) -> QWidget:
         self.metadata_snippet = QLabel()
@@ -1009,8 +944,6 @@ class MainWindow(QMainWindow):
         self.stat_labels["Metadata"].setText(str(stats.metadata))
         self.stat_labels["Traits"].setText(str(stats.traits))
         self.stat_labels["Supply"].setText(str(stats.supply))
-        self._refresh_generate_thumbs()
-        self._refresh_image_tools_preview()
         self._refresh_metadata_preview()
 
     def run_validation(self) -> None:
