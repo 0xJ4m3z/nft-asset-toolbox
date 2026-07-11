@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 import math
 import os
 import subprocess
@@ -41,7 +40,6 @@ from nft_asset_toolbox import __version__
 from nft_asset_toolbox.core import (
     ValidationResult,
     get_collection_stats,
-    metadata_dir_for,
     validate_collection,
 )
 
@@ -51,8 +49,10 @@ SAMPLE_COLLECTION = ROOT / "sample_collection"
 SAMPLE_OUTPUT = SAMPLE_COLLECTION / "output"
 DEFAULT_COLLECTION = SAMPLE_OUTPUT if SAMPLE_OUTPUT.exists() else SAMPLE_COLLECTION
 REPORTS_DIR = ROOT / "reports"
-GENERATE_PREVIEW_IMAGE = SAMPLE_OUTPUT / "images" / "1.png"
-IMAGE_TOOLS_PREVIEW_IMAGE = SAMPLE_OUTPUT / "images" / "6.png"
+HERO_ASSETS_DIR = ROOT / "assets" / "hero"
+GENERATE_HERO_IMAGE = HERO_ASSETS_DIR / "gen-1.png"
+IMAGE_TOOLS_HERO_IMAGE = HERO_ASSETS_DIR / "resize-2.png"
+METADATA_HERO_IMAGE = HERO_ASSETS_DIR / "meta-3.png"
 
 
 class ValidationWorker(QThread):
@@ -271,27 +271,6 @@ class RoundedImage(QLabel):
         painter.drawRoundedRect(QRectF(0.5, 0.5, size - 1, size - 1), radius, radius)
         painter.end()
         return pixmap
-
-
-class CheckerBackdrop(QWidget):
-    def __init__(self, path: Path | None, size: int = 96, cell: int = 8):
-        super().__init__()
-        self._size = size
-        self._cell = cell
-        self.setFixedSize(size, size)
-        image = RoundedImage(path, size - 6, radius=10)
-        layout = QVBoxLayout(self)
-        layout.setContentsMargins(3, 3, 3, 3)
-        layout.addWidget(image)
-
-    def paintEvent(self, event) -> None:
-        painter = QPainter(self)
-        light = QColor("#233046")
-        dark = QColor("#1a2536")
-        for row in range(0, self._size, self._cell):
-            for col in range(0, self._size, self._cell):
-                color = light if ((row // self._cell) + (col // self._cell)) % 2 == 0 else dark
-                painter.fillRect(col, row, self._cell, self._cell, color)
 
 
 class MainWindow(QMainWindow):
@@ -745,64 +724,23 @@ class MainWindow(QMainWindow):
         layout.addWidget(subtitle)
         return header
 
-    def _generate_preview(self) -> QWidget:
+    def _hero_preview(self, image_path: Path) -> QWidget:
         row = QWidget()
         layout = QHBoxLayout(row)
         layout.setContentsMargins(0, 0, 0, 0)
-        path = GENERATE_PREVIEW_IMAGE if GENERATE_PREVIEW_IMAGE.exists() else None
-        layout.addWidget(RoundedImage(path, 92, radius=12))
+        path = image_path if image_path.exists() else None
+        layout.addWidget(RoundedImage(path, 104, radius=12))
         layout.addStretch(1)
         return row
+
+    def _generate_preview(self) -> QWidget:
+        return self._hero_preview(GENERATE_HERO_IMAGE)
 
     def _image_tools_preview(self) -> QWidget:
-        row = QWidget()
-        layout = QHBoxLayout(row)
-        layout.setContentsMargins(0, 0, 0, 0)
-        path = IMAGE_TOOLS_PREVIEW_IMAGE if IMAGE_TOOLS_PREVIEW_IMAGE.exists() else None
-        layout.addWidget(CheckerBackdrop(path, 92))
-        layout.addStretch(1)
-        return row
+        return self._hero_preview(IMAGE_TOOLS_HERO_IMAGE)
 
     def _metadata_preview(self) -> QWidget:
-        self.metadata_snippet = QLabel()
-        self.metadata_snippet.setObjectName("metaSnippet")
-        font = QFont("Monospace")
-        font.setStyleHint(QFont.Monospace)
-        font.setPointSize(8)
-        self.metadata_snippet.setFont(font)
-        self._refresh_metadata_preview()
-        return self.metadata_snippet
-
-    def _refresh_metadata_preview(self) -> None:
-        self.metadata_snippet.setText(self._load_metadata_snippet(self.collection_dir))
-
-    def _load_metadata_snippet(self, collection_dir: Path, limit_attrs: int = 2) -> str:
-        try:
-            meta_dir = metadata_dir_for(Path(collection_dir))
-
-            def sort_key(path: Path):
-                try:
-                    return (0, int(path.stem))
-                except ValueError:
-                    return (1, path.stem)
-
-            candidates = sorted(meta_dir.glob("*.json"), key=sort_key)
-            data = json.loads(candidates[0].read_text(encoding="utf-8")) if candidates else {}
-        except Exception:
-            data = {}
-
-        attrs = data.get("attributes", []) if isinstance(data, dict) else []
-        lines = ["{", f'  "name": "{data.get("name", "Sample NFT")}",', '  "attributes": [']
-        for attr in attrs[:limit_attrs]:
-            if not isinstance(attr, dict):
-                continue
-            lines.append(f'    {{"trait_type": "{attr.get("trait_type", "")}", "value": "{attr.get("value", "")}"}},')
-        remaining = len(attrs) - limit_attrs
-        if remaining > 0:
-            lines.append(f"    ... (+{remaining} more)")
-        lines.append("  ]")
-        lines.append("}")
-        return "\n".join(lines)
+        return self._hero_preview(METADATA_HERO_IMAGE)
 
     def _generator_page(self) -> QWidget:
         page = self._page()
@@ -966,7 +904,6 @@ class MainWindow(QMainWindow):
         self.stat_labels["Metadata"].setText(str(stats.metadata))
         self.stat_labels["Traits"].setText(str(stats.traits))
         self.stat_labels["Supply"].setText(str(stats.supply))
-        self._refresh_metadata_preview()
 
     def run_validation(self) -> None:
         if self.worker and self.worker.isRunning():
@@ -1083,13 +1020,6 @@ class MainWindow(QMainWindow):
                 color: #b8c7db;
                 font-size: 11px;
                 padding: 0;
-            }
-            #metaSnippet {
-                background: #0e1520;
-                border: 1px solid #253044;
-                border-radius: 6px;
-                color: #9bd2ff;
-                padding: 5px 8px;
             }
             #bottomBar { background: #111a28; border-top: 1px solid #233046; color: #9fb0c4; }
             #sidebar QToolButton {
