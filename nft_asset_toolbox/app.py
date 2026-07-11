@@ -335,6 +335,7 @@ class MainWindow(QMainWindow):
             btn.setIconSize(QSize(18, 18))
             btn.setIcon(self._nav_icon(icon_name, False))
             btn.setFixedHeight(38)
+            btn.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
             btn.setCursor(Qt.PointingHandCursor)
             btn.clicked.connect(lambda checked=False, i=index: self._select_page(i))
             layout.addWidget(btn)
@@ -515,7 +516,7 @@ class MainWindow(QMainWindow):
         card.layout.addLayout(row)
         return card, value
 
-    TOOL_CARD_HEIGHT = 330
+    TOOL_CARD_HEIGHT = 240
 
     def _tool_card(
         self,
@@ -550,10 +551,12 @@ class MainWindow(QMainWindow):
         desc.setWordWrap(True)
         card.layout.addWidget(desc)
 
+        content_row = QHBoxLayout()
+        content_row.setSpacing(14)
         if preview is not None:
-            card.layout.addWidget(preview)
-
-        card.layout.addWidget(self._feature_list(features))
+            content_row.addWidget(preview)
+        content_row.addWidget(self._feature_list(features), 1)
+        card.layout.addLayout(content_row)
         card.layout.addStretch(1)
 
         button = QPushButton(button_text)
@@ -572,10 +575,18 @@ class MainWindow(QMainWindow):
             layout.addWidget(self._feature_label(feature))
         return box
 
-    def _feature_label(self, text: str) -> QLabel:
-        label = QLabel(f"+ {text}")
+    def _feature_label(self, text: str) -> QWidget:
+        row = QWidget()
+        layout = QHBoxLayout(row)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(6)
+        check = StatusCheckIcon(14)
+        label = QLabel(text)
         label.setObjectName("featureText")
-        return label
+        label.setWordWrap(True)
+        layout.addWidget(check, 0, Qt.AlignTop)
+        layout.addWidget(label, 1)
+        return row
 
     def _dashboard_page(self) -> QWidget:
         page = self._page()
@@ -727,14 +738,8 @@ class MainWindow(QMainWindow):
     HERO_IMAGE_SIZE = 96
 
     def _hero_preview(self, image_path: Path) -> QWidget:
-        row = QWidget()
-        row.setFixedHeight(self.HERO_IMAGE_SIZE)
-        layout = QHBoxLayout(row)
-        layout.setContentsMargins(0, 0, 0, 0)
         path = image_path if image_path.exists() else None
-        layout.addWidget(RoundedImage(path, self.HERO_IMAGE_SIZE, radius=12))
-        layout.addStretch(1)
-        return row
+        return RoundedImage(path, self.HERO_IMAGE_SIZE, radius=12)
 
     def _generate_preview(self) -> QWidget:
         return self._hero_preview(GENERATE_HERO_IMAGE)
