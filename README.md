@@ -1,17 +1,18 @@
 # NFT Asset Toolbox
 
-NFT Asset Toolbox is a Python toolkit for generating, processing, validating, and preparing NFT collection assets.
+NFT Asset Toolbox is a Python desktop toolkit for generating, processing, validating, and preparing NFT collection assets. It includes layered image generation, ERC-721-style metadata output, image processing utilities, trait reports, validation tools, and a sample collection for local testing.
 
 ![NFT Asset Toolbox Dashboard](docs/screenshots/nft_asset_toolbox_dashboard.png)
 
 ## Features
 
-- Desktop dashboard for navigating and running NFT asset tools
-- Image, metadata, trait, and supply stats
-- Metadata validation and report output
+- Polished PySide6 desktop dashboard
+- Layered NFT image generation
+- ERC-721-style metadata output
 - Image resize and WebP conversion tools
-- Generator tools for layered assets and ERC-721 metadata
-- Small sample collection for local testing
+- Metadata validation and trait reports
+- IPFS image field update helper
+- Included sample collection for local testing
 - Existing CLI scripts remain available in `generator/`, `image/`, and `metadata/`
 
 ## Desktop UI
@@ -45,11 +46,7 @@ python3 -m pytest tests/ -q
 
 ## Tech Stack
 
-- Python 3
-- PySide6
-- Pillow
-- JSON
-- pytest
+Python · PySide6 · Pillow · JSON · Metadata Tools · Image Processing · pytest
 
 ## Notes
 
