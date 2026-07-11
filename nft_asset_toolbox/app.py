@@ -516,7 +516,7 @@ class MainWindow(QMainWindow):
         card.layout.addLayout(row)
         return card, value
 
-    TOOL_CARD_HEIGHT = 240
+    TOOL_CARD_HEIGHT = 262
 
     def _tool_card(
         self,
@@ -670,7 +670,7 @@ class MainWindow(QMainWindow):
         lower = QHBoxLayout()
         lower.setSpacing(14)
         activity = Card("Recent Activity")
-        activity.setFixedHeight(196)
+        activity.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         self.activity_table.setHorizontalHeaderLabels(["Time", "Activity", "Status", "Details"])
         self.activity_table.verticalHeader().setVisible(False)
         self.activity_table.horizontalHeader().setStretchLastSection(True)
@@ -687,11 +687,11 @@ class MainWindow(QMainWindow):
         lower.addWidget(activity, 3)
 
         quick = Card("Quick Actions")
-        quick.setFixedHeight(196)
+        quick.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         grid = QGridLayout()
         grid.setContentsMargins(0, 0, 0, 0)
         grid.setHorizontalSpacing(8)
-        grid.setVerticalSpacing(14)
+        grid.setVerticalSpacing(24)
         actions = [
             ("Validate Supply", "metadata_tools", self.run_validation),
             (
@@ -708,16 +708,16 @@ class MainWindow(QMainWindow):
             btn = QPushButton(text)
             btn.setObjectName("quickActionBtn")
             btn.setIcon(self._nav_icon(icon_name, True))
-            btn.setIconSize(QSize(15, 15))
-            btn.setFixedHeight(40)
+            btn.setIconSize(QSize(17, 17))
+            btn.setFixedHeight(74)
             btn.setCursor(Qt.PointingHandCursor)
             btn.clicked.connect(slot)
             grid.addWidget(btn, i // 3, i % 3)
+        quick.layout.addStretch(1)
         quick.layout.addLayout(grid)
         quick.layout.addStretch(1)
         lower.addWidget(quick, 2)
-        page.addLayout(lower)
-        page.addStretch(1)
+        page.addLayout(lower, 1)
         self.add_activity("Dashboard", "Loaded sample collection", "Success", "100 images, 100 metadata")
         self.add_activity("Generator", "Generated 100 sample NFTs", "Success", "sample_collection/output")
         self.add_activity("Metadata Tools", "Validated supply", "Success", "No missing files")
@@ -955,7 +955,7 @@ class MainWindow(QMainWindow):
         values = [datetime.now().strftime("%Y-%m-%d %H:%M"), action, status, details]
         for col, value in enumerate(values):
             self.activity_table.setItem(row, col, QTableWidgetItem(value))
-        self.activity_table.setRowHeight(row, 26)
+        self.activity_table.setRowHeight(row, 34)
 
     def _placeholder(self, title: str, body: str) -> None:
         self.add_activity(title, "Opened placeholder", "Info", body)
