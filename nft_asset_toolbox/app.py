@@ -193,7 +193,7 @@ class BrandLogo(QWidget):
         painter.setBrush(QBrush(gradient))
         painter.drawPolygon(outer)
 
-        inner_r = r * 0.58
+        inner_r = r * 0.74
         inner = [
             QPointF(cx + inner_r * math.cos(math.radians(60 * i - 90)), cy + inner_r * math.sin(math.radians(60 * i - 90)))
             for i in range(6)
@@ -202,7 +202,7 @@ class BrandLogo(QWidget):
         painter.drawPolygon(inner)
 
         painter.setPen(QPen(QColor("#dce8ff")))
-        font = QFont("Inter", max(6, int(r * 0.32)), QFont.Bold)
+        font = QFont("Inter", max(6, int(r * 0.4)), QFont.Bold)
         painter.setFont(font)
         painter.drawText(QRectF(0, 0, w, h), Qt.AlignCenter, "NFT")
 
@@ -476,7 +476,7 @@ class MainWindow(QMainWindow):
         layout.setContentsMargins(2, 0, 2, 0)
         layout.setSpacing(12)
 
-        logo = BrandLogo(46)
+        logo = BrandLogo(58)
 
         text_box = QVBoxLayout()
         text_box.setContentsMargins(0, 0, 0, 0)
